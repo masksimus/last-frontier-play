@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / 'dist'
 assert (DIST / 'index.html').is_file(), 'Vite output missing index.html'
 copytree(ROOT / 'assets', DIST / 'assets', dirs_exist_ok=True)
+copy2(ROOT / 'THIRD_PARTY_NOTICES.md', DIST / 'THIRD_PARTY_NOTICES.md')
 (DIST / 'src').mkdir(exist_ok=True)
 for name in ('core.js', 'animation.js', 'combat-v8.js', 'game.js'):
     copy2(ROOT / 'src' / name, DIST / 'src' / name)
@@ -21,15 +22,17 @@ for name in ('core.js', 'animation.js', 'combat-v8.js', 'game.js'):
 notices = DIST / 'THIRD_PARTY_LICENSES'
 notices.mkdir(exist_ok=True)
 entries = []
-for name in ('pixi.js', 'howler', 'vite'):
+for name in ('pixi.js', 'howler', 'vite', 'three', '@dimforge/rapier3d-compat'):
     package_dir = ROOT / 'node_modules' / name
     manifest = json.loads((package_dir / 'package.json').read_text(encoding='utf-8'))
     candidates = [path for path in package_dir.iterdir() if path.is_file() and
                   path.name.lower().startswith(('license', 'licence', 'copying'))]
+    if not candidates and name == '@dimforge/rapier3d-compat':
+        candidates = [ROOT / 'assets/models/RAPIER-LICENSE.txt']
     if not candidates:
         raise RuntimeError('Missing source license notice for ' + name)
     candidate = sorted(candidates, key=lambda path: (not path.name.lower().startswith('license'), path.name))[0]
-    dest = notices / (name.replace('.', '_') + '-LICENSE.txt')
+    dest = notices / (name.replace('.', '_').replace('/', '_').replace('@', '') + '-LICENSE.txt')
     copy2(candidate, dest)
     entries.append({'package': name, 'version': manifest['version'],
                     'license': manifest.get('license', 'SEE LICENSE'),
@@ -46,7 +49,7 @@ records = [{'path': path.relative_to(DIST).as_posix(),
 (DIST / 'build-manifest.json').write_text(
     json.dumps({'files': records}, indent=2, ensure_ascii=False), encoding='utf-8')
 
-output = ROOT / 'last-frontier-v6-yandex.zip'
+output = ROOT / 'last-frontier-v9-yandex.zip'
 with ZipFile(output, 'w', ZIP_DEFLATED, compresslevel=7) as archive:
     for file in sorted(path for path in DIST.rglob('*') if path.is_file()):
         archive.write(file, file.relative_to(DIST).as_posix())

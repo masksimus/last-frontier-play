@@ -1,0 +1,167 @@
+[
+  {
+    "file": "barrel.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/barrel.glb",
+    "sha256": "8a95781be23b35ebb39ad90278affc03140c75d4d055027e98be0313de084451"
+  },
+  {
+    "file": "barrels.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/barrels.glb",
+    "sha256": "5eefdb7cb192863ac6b6709293e196ae97e7cceb29c6ab754850a738f3b2379b"
+  },
+  {
+    "file": "machine_generator.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/machine_generator.glb",
+    "sha256": "98e8ac6aceada3b2483ed1eceb59bff7190ee774edac799350ccc11ad140f7f3"
+  },
+  {
+    "file": "machine_generatorLarge.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/machine_generatorLarge.glb",
+    "sha256": "bbfa33a2e7c7eff7d9ee12f64255249b7e2f5d4b2ada2d681aa35cf38ba599bc"
+  },
+  {
+    "file": "chimney_detailed.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/chimney_detailed.glb",
+    "sha256": "2b7b4950f5a1430ccf7d3469c21b837dc52ec61538dcdbcf875529767d68d752"
+  },
+  {
+    "file": "hangar_smallA.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/hangar_smallA.glb",
+    "sha256": "66cc1f91e0db1dd2c7ec79fa8cf3f3adf703291679c33c293ebd19da45bd53f7"
+  },
+  {
+    "file": "pipe_straight.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/pipe_straight.glb",
+    "sha256": "3386146dbfa9a9f2c7bcc5a6599a3c9d43a9e029c26f61b345ff6b16df80e6a1"
+  },
+  {
+    "file": "pipe_cornerRound.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/pipe_cornerRound.glb",
+    "sha256": "27a93f4c6069c21c577eac57415455b6ad04316267fb7bdcb8ae8cf7cf29cd40"
+  },
+  {
+    "file": "rail.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/rail.glb",
+    "sha256": "ce9c3ece35b86e97c21463f491acbe824e4af4220e621db5d7a8f067bc2868fb"
+  },
+  {
+    "file": "supports_high.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/supports_high.glb",
+    "sha256": "48a8aa7818e0f3731aa7bd825f2030089bc16340fcebdf2a4bf60ef4a933a4da"
+  },
+  {
+    "file": "turret_double.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/turret_double.glb",
+    "sha256": "a707823a86f895f6418df2340f2e231d7d88be6c2069d3245433299cec1f9f9c"
+  },
+  {
+    "file": "weapon_rifle.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/weapon_rifle.glb",
+    "sha256": "266ffd12306a2afc2638e9a479687adf738fc3cd9e938ce8e3195ccb312a6b31"
+  },
+  {
+    "file": "weapon_gun.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/weapon_gun.glb",
+    "sha256": "f8e0edea00355789f9fac087e40c7a710468cf6a6c1c22a86426d44883f438b5"
+  },
+  {
+    "file": "craft_speederA.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/craft_speederA.glb",
+    "sha256": "dc48652fa5c59088a5e3902abce7598199f32e0dcb8c91bac25e17bb8ce15876"
+  },
+  {
+    "file": "rock_crystals.glb",
+    "author": "Kenney",
+    "license": "CC0-1.0",
+    "source": "https://kenney.nl/assets/space-kit",
+    "archivePath": "Models/GLTF format/rock_crystals.glb",
+    "sha256": "fbe5ce9cf6a036594b0eb4fc475633753bcd05780bf60bd82aa9c63fcbfd4e76"
+  },
+  {
+    "file": "Astronaut_FinnTheFrog.glb",
+    "author": "Quaternius",
+    "license": "CC0-1.0",
+    "source": "https://quaternius.com/packs/ultimatespacekit.html",
+    "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
+    "modification": "Embedded glTF buffers/images packed losslessly into GLB",
+    "sha256": "3fcf7e409f4d48d40345aa7682ccc44eca3ec845a63746eb1675a8018b4c9d88"
+  },
+  {
+    "file": "Enemy_Large.glb",
+    "author": "Quaternius",
+    "license": "CC0-1.0",
+    "source": "https://quaternius.com/packs/ultimatespacekit.html",
+    "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
+    "modification": "Embedded glTF buffers/images packed losslessly into GLB",
+    "sha256": "a2cd307a90daff05cae7d171e84837e8d62df12ef8a5acf60a62d1a18adae2f6"
+  },
+  {
+    "file": "Enemy_Flying.glb",
+    "author": "Quaternius",
+    "license": "CC0-1.0",
+    "source": "https://quaternius.com/packs/ultimatespacekit.html",
+    "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
+    "modification": "Embedded glTF buffers/images packed losslessly into GLB",
+    "sha256": "07c1a3cfea4aa3be48a193cc4831843b0bddd7a7ae48f393d9fcd7682ce6f5f7"
+  },
+  {
+    "file": "Enemy_Small.glb",
+    "author": "Quaternius",
+    "license": "CC0-1.0",
+    "source": "https://quaternius.com/packs/ultimatespacekit.html",
+    "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
+    "modification": "Embedded glTF buffers/images packed losslessly into GLB",
+    "sha256": "3be3357e50070d74c5ab12e46749e559adc210ef017a67d9891897387eeac0e9"
+  },
+  {
+    "file": "Mech_FinnTheFrog.glb",
+    "author": "Quaternius",
+    "license": "CC0-1.0",
+    "source": "https://quaternius.com/packs/ultimatespacekit.html",
+    "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
+    "modification": "Embedded glTF buffers/images packed losslessly into GLB",
+    "sha256": "27d0e7c52298509e3bba0787f8b6aa222caa2f1cecbe7d9310a356d03ffe5599"
+  }
+]
