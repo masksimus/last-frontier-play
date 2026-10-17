@@ -1,0 +1,114 @@
+name: Publish V10 Blender GLB preview without changing V8/V9/V9.2/V9.3
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/v10-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: last-frontier-pages-production
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 22571f041aa88e988a8b837fc0ee70623c7a4115
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build V10 Blender GLB scene from verified commit
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run verify
+          test -f dist/index.html
+          test -f dist/build-manifest.json
+          grep -q 'Siege_Titan_HD.glb' dist/assets/index-*.js
+          test -f dist/assets/models/Siege_Titan_HD.glb
+      - name: Preserve V8 V9.1 V9.2 V9.3 byte-for-byte while adding Blender V10
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures,hashlib,json,shutil,time,urllib.request,zipfile
+          from pathlib import Path
+          from urllib.parse import quote
+          base='https://masksimus.github.io/last-frontier-play/'
+          expected={
+            '': 'da2777fe9607667fe58e7dce50912bac3be2535ef08f232ffcb661eb092048d9',
+            'v9/': 'ac35b84f5be3cbd016fc861dc9805c9118975f86f21ffb05e5867374b4a950fe',
+            'v9-2/': None,
+            'v9-3/': None
+          }
+          def get(url):
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(url,timeout=45) as response:return response.read()
+                  except Exception:
+                      if attempt==3:raise
+                      time.sleep(1.25*(attempt+1))
+          output=Path('pages-v10');output.mkdir(exist_ok=True)
+          for prefix,expected_sha in expected.items():
+              raw=get(base+prefix+'build-manifest.json')
+              if expected_sha is not None:
+                  assert hashlib.sha256(raw).hexdigest()==expected_sha, 'Stable manifest changed; refusing overwrite: '+prefix
+              manifest=json.loads(raw)
+              def preserve(item):
+                  name=item['path'];rel=Path(name)
+                  assert not rel.is_absolute() and '..' not in rel.parts and not name.startswith('v9')
+                  payload=get(base+prefix+quote(name))
+                  assert len(payload)==item['bytes'] and hashlib.sha256(payload).hexdigest()==item['sha256'],name
+                  dest=output/prefix/rel;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(payload)
+              with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:list(pool.map(preserve,manifest['files']))
+              target=output/prefix/'build-manifest.json'
+              target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+              print('Preserved',prefix or 'V8',len(manifest['files']),'verified files')
+          previous=get(base+'v9/last-frontier-v9.1-rc1-yandex.zip')
+          oldzip=output/'v9/last-frontier-v9.1-rc1-yandex.zip';oldzip.write_bytes(previous)
+          previous_v92=get(base+'v9-2/last-frontier-v9-2-experimental-yandex.zip')
+          oldv92=output/'v9-2/last-frontier-v9-2-experimental-yandex.zip';oldv92.write_bytes(previous_v92)
+          older93=get(base+'v9-3/last-frontier-v9-3-art-preview-yandex.zip')
+          oldv93=output/'v9-3/last-frontier-v9-3-art-preview-yandex.zip';oldv93.write_bytes(older93)
+          with zipfile.ZipFile(oldv93) as z:
+              assert z.testzip() is None
+          with zipfile.ZipFile(oldv92) as z:
+              assert z.testzip() is None
+          with zipfile.ZipFile(oldzip) as archive:
+              assert archive.testzip() is None
+              manifest=json.loads(archive.read('build-manifest.json'))
+              for item in manifest['files']:
+                  assert hashlib.sha256(archive.read(item['path'])).hexdigest()==item['sha256']
+          shutil.copytree('app/dist',output/'v10')
+          shutil.copy2('app/last-frontier-v9.1-rc1-yandex.zip',output/'v10/last-frontier-v10-blender-hd-yandex.zip')
+          (output/'.nojekyll').touch()
+          for sub in ['index.html','v9/index.html','v9-2/index.html','v9-3/index.html','v10/index.html']:
+              assert (output/sub).is_file(),sub
+          for prefix,sha in expected.items():
+              if sha is not None:
+                  assert hashlib.sha256((output/prefix/'build-manifest.json').read_bytes()).hexdigest()==sha
+          print('Blender HD V10 at /v10/; previous V8 V9.1 V9.2 V9.3 preserved byte-identical')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-v10
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: \${{ steps.publish.outputs.page_url }}v10/
+    steps:
+      - id: publish
+        uses: actions/deploy-pages@v4
