@@ -13,7 +13,7 @@ import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
 import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.3.0-art.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'10.0.0-blender.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -45,6 +45,8 @@ async function init(){
  const loader=new GLTFLoader();
  const files=[...new Set([...PROPS.filter(p=>!p.procedural).map(p=>p.model),...Object.values(actorModels),'chimney_detailed','hangar_smallA','pipe_straight','pipe_cornerRound','rail','supports_high','turret_double','weapon_rifle','weapon_gun','craft_speederA','rock_crystals'])];
  const models=Object.fromEntries(await Promise.all(files.map(async name=>[name,await loader.loadAsync(`assets/models/${name}.glb`)])));
+  // Real offline Blender-authored GLB: optional fallback retains the previously tested animated titan.
+  try{models.siege_titan_hd=await loader.loadAsync('assets/models/Siege_Titan_HD.glb');state.highDetailTitan=true;}catch(err){state.highDetailTitan=false;console.warn('Blender HD titan unavailable; using old rig:',String(err));}
  state.models=files.length;state.animationClips=Object.fromEntries(Object.entries(actorModels).map(([kind,name])=>[kind,models[name].animations.map(a=>a.name)]));
  physics=await (await import('./physics-v9.mjs')).createPhysics();bridge.enemyDirection=createNavigation();bridge.wallHit=(a,b)=>physics?.wallHit(a,b);bridge.move=(entity,previous)=>physics?.move(entity,previous);
  const hemi=new THREE.HemisphereLight(0x7caccd,0x1c1113,1.02);scene.add(hemi);
@@ -130,6 +132,26 @@ async function init(){
   obj.scale.setScalar(heights[kind]/height);obj.position.y=-bounds.min.y*obj.scale.y;
   const root=new THREE.Group();root.add(obj);scene.add(root);
   const armorV93=kind==='boss'?createTitanArmor(root):null;
+  let titanHD=null,pivotsHD=null;
+  if(kind==='boss'&&models.siege_titan_hd){
+    titanHD=models.siege_titan_hd.scene.clone(true);
+    const boundsHD=new THREE.Box3().setFromObject(titanHD);
+    const desiredHeight=5.5;
+    const heightHD=boundsHD.max.y-boundsHD.min.y;
+    if(heightHD>0){
+      titanHD.scale.setScalar(desiredHeight/heightHD);
+      titanHD.position.y=-boundsHD.min.y*titanHD.scale.y;
+      titanHD.traverse(m=>{if(m.isMesh){m.castShadow=false;m.receiveShadow=true;}});
+      obj.visible=false;armorV93.group.visible=false;
+      root.add(titanHD);
+      pivotsHD={left:titanHD.getObjectByName('ARM_L'),
+        right:titanHD.getObjectByName('ARM_R'),
+        legL:titanHD.getObjectByName('LEG_L'),
+        legR:titanHD.getObjectByName('LEG_R'),
+        head:titanHD.getObjectByName('HEAD'),
+        cannon:titanHD.getObjectByName('CANNON_R')};
+    }else titanHD=null;
+  }
   obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();o.material.metalness=kind==='player'||kind==='boss'?.42:.18;o.material.roughness=.55;
    o.material.color.set(kind==='player'?0x8db7d3:kind==='boss'?0x85717b:0xc27979);
   }});
@@ -148,13 +170,24 @@ async function init(){
    const visor=new THREE.Mesh(new THREE.BoxGeometry(radius*1.5,radius*.25,radius*.22),kind==='player'?amber:red);visor.position.set(0,0,radius);helmet.add(visor);root.add(helmet);
   }
   const animation=createActorAnimation(mixer,actions,kind);
-  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
+  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,titanHD,pivotsHD,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
  }
  function actor(id,kind,x,y,angle,motion,dt){
   let a=actorMap.get(id);if(a&&a.kind!==kind){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);a=null;}
   if(!a){a=pools[kind].pop()||makeActor(kind);actorMap.set(id,a);a.animation.reset();a.root.visible=true;a.age=0;a.lastX=x;a.lastY=y;a.lastShot=motion.shots||0;a.recoil=0;a.root.rotation.y=Math.PI/2-angle;}
   a.seen=true;a.age+=dt;
   a.armorV93?.update(a.age,!!motion.enraged);
+  // Articulated mesh pivots from Blender export. Physics and hit boxes remain unchanged.
+  if(a.pivotsHD){
+    const stride=Math.min(.17,Math.max(0,dt)*8);
+    const phase=Math.sin(a.age*6.2)*stride;
+    if(a.pivotsHD.legL)a.pivotsHD.legL.rotation.x=phase;
+    if(a.pivotsHD.legR)a.pivotsHD.legR.rotation.x=-phase;
+    if(a.pivotsHD.left)a.pivotsHD.left.rotation.x=-phase*.7;
+    if(a.pivotsHD.right)a.pivotsHD.right.rotation.x=phase*.55;
+    if(a.pivotsHD.cannon)a.pivotsHD.cannon.position.z=motion.firing?-.07:0;
+    if(a.pivotsHD.head)a.pivotsHD.head.rotation.z=Math.sin(a.age*1.5)*.035;
+  }
   const dx=(x-a.lastX)/UNIT,dy=(y-a.lastY)/UNIT;
   const speed=dt>0?Math.hypot(dx,dy)/dt:0;
   a.lastX=x;a.lastY=y;
@@ -234,6 +267,6 @@ async function init(){
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
   renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
- state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.3 · АРТ-ОБНОВЛЕНИЕ';
+ state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V10 · BLENDER HD';
 }
 init().catch(failure);
