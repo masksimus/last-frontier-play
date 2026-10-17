@@ -23,7 +23,7 @@ def material(name,base,met,rough,emission=None,tex=None):
  bs.inputs['Roughness'].default_value=rough
  if emission:
   bs.inputs['Emission'].default_value=(*emission,1)
-  bs.inputs['Emission Strength'].default_value=3.5
+  if 'Emission Strength' in bs.inputs:bs.inputs['Emission Strength'].default_value=3.5
  if tex:
   nodes=m.node_tree.nodes;links=m.node_tree.links
   al=nodes.new('ShaderNodeTexImage')
@@ -58,7 +58,7 @@ ROOT=pivot('ROOT_GAME_ASSET');TORSO=pivot('TORSO',parent=ROOT)
 ARM_L=pivot('ARM_L',(-1.39,0,3.65),ROOT);ARM_R=pivot('ARM_R',(1.39,0,3.65),ROOT)
 LEG_L=pivot('LEG_L',(-.84,0,1.65),ROOT);LEG_R=pivot('LEG_R',(.84,0,1.65),ROOT)
 HEAD=pivot('HEAD',(0,-.04,4.32),ROOT)
-CANNON=pivot('CANNON_R',(1.67,-.45,3.16),ARM_R)
+CANNON=pivot('CANNON_R',(.28,-.45,-.49),ARM_R)
 def assign(o,name,mat,parent):
  o.name=name;o.data.materials.append(mat)
  if parent:
@@ -206,7 +206,9 @@ bpy.ops.object.select_all(action='DESELECT')
 # Models export with source PBR texture assets embedded directly into .glb.
 bpy.context.scene.render.engine='BLENDER_EEVEE'
 bpy.context.scene.world.color=(.07,.1,.14)
-bpy.ops.wm.save_as_mainfile(filepath=str(out.with_suffix('.blend')))
+if cfg.blend:
+ blend=Path(cfg.blend).resolve();blend.parent.mkdir(parents=True,exist_ok=True)
+ bpy.ops.wm.save_as_mainfile(filepath=str(blend))
 bpy.ops.export_scene.gltf(filepath=str(out),export_format='GLB',export_apply=False,export_animations=False,export_materials='EXPORT',export_texcoords=True,export_normals=True)
 assert out.stat().st_size>10000
 print('Generated ORIGINAL PBR SIEGE TITAN',out,out.stat().st_size,'bytes; merged material groups',merged_groups)
