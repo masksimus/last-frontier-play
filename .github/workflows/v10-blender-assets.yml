@@ -26,9 +26,10 @@ jobs:
       - name: Install official Ubuntu Blender and Python texture libraries
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender python3-numpy
           python -m pip install --disable-pip-version-check "numpy==1.26.4" "pillow==11.3.0"
           blender --version | head -5
+          /usr/bin/python3 -c 'import numpy; print("Blender system Python NumPy:", numpy.__version__)'
       - name: Generate original PBR color, roughness and tangent-space normal textures
         run: python app/scripts/generate_titan_pbr.py --output app/art-source/titan/pbr --size 512
       - name: Actually render the authored meshes with Blender and export a glTF2 binary
