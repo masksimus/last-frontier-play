@@ -1,0 +1,82 @@
+name: Last Frontier V10 - Real Blender PBR 3D Acceptance
+on:
+  push:
+    branches: [feat/v10-blender-real-assets-20261018]
+    paths:
+      - 'app/src/**'
+      - 'app/assets/models/Siege_Titan_HD.glb'
+      - 'app/assets/models/manifest.json'
+      - 'app/tests/**'
+      - 'app/index.html'
+      - '.github/workflows/v10-game-acceptance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontier-v10-game
+  cancel-in-progress: true
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned Three.js, Rapier, Howler and Vite
+        working-directory: app
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Check game and Blender art source for syntax errors
+        working-directory: app
+        run: |
+          node --check src/three-layer.mjs
+          node --check src/game.js
+          python -m py_compile scripts/blender_titan_v10.py scripts/generate_titan_pbr.py
+      - name: Verify real model topology, PBR texture/GLB source, license and gameplay
+        working-directory: app
+        run: |
+          node --test tests/*.test.cjs
+          python scripts/audit_glb_geometry.py --output glb-audit-v10.json
+          npm run build
+          test -f dist/assets/models/Siege_Titan_HD.glb
+      - name: Verify full manifest-checked production ZIP contains authored GLB
+        working-directory: app
+        run: |
+          python - <<'PY'
+          import zipfile,json,hashlib
+          from pathlib import Path
+          with zipfile.ZipFile('last-frontier-v9.1-rc1-yandex.zip') as z:
+              paths=set(z.namelist())
+              assert 'assets/models/Siege_Titan_HD.glb' in paths
+              assert 'src/game.js' in paths and 'index.html' in paths
+              content=z.read('assets/models/Siege_Titan_HD.glb')
+              assert content[:4]==b'glTF'
+              manifest=json.loads(z.read('build-manifest.json'))
+              for f in manifest['files']:
+                  assert hashlib.sha256(z.read(f['path'])).hexdigest()==f['sha256']
+              print('Blender model included in SHA-256 verified browser/ Yandex package:',len(content),'bytes')
+          PY
+      - name: Install real headless Chromium and software WebGL for browser QA
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+      - name: Verify desktop, mobile landscape/portrait, boss battle, load failure and context recovery
+        working-directory: app
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Last-Frontier-V10-Blender-PBR-GLB-Game-Build
+          path: |
+            app/last-frontier-v9.1-rc1-yandex.zip
+            app/glb-audit-v10.json
+            app/browser-v9-evidence/
+          retention-days: 21
+          if-no-files-found: warn
