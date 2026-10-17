@@ -11,9 +11,10 @@ import { createConcreteMaps, weatherMetal } from './surfaces-v9.mjs';
 import { createCinematicIndustrial, detailBudget } from './cinematic-v9.mjs';
 import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
 import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.mjs';
+import { createAegisHero, animateAegis } from './aegis-hero-3d.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'10.0.0-blender.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'11.0.0-aegis-real-3d',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -131,6 +132,9 @@ async function init(){
   const obj=clone(models[actorModels[kind]].scene);const bounds=new THREE.Box3().setFromObject(obj),height=bounds.max.y-bounds.min.y;
   obj.scale.setScalar(heights[kind]/height);obj.position.y=-bounds.min.y*obj.scale.y;
   const root=new THREE.Group();root.add(obj);scene.add(root);
+  // AEGIS replaces the rendered astronaut with actual meshes; existing mixer remains inert behind it.
+  const aegis=kind==='player'?createAegisHero():null;
+  if(aegis){obj.visible=false;root.add(aegis);state.aegisHero=true;}
   const armorV93=kind==='boss'?createTitanArmor(root):null;
   let titanHD=null,pivotsHD=null;
   if(kind==='boss'&&models.siege_titan_hd){
@@ -163,14 +167,14 @@ async function init(){
   if(kind==='runner')root.scale.set(.8,1,.85);
   const mixer=new THREE.AnimationMixer(obj),actions={};for(const clip of models[actorModels[kind]].animations)actions[clip.name]=mixer.clipAction(clip);
   let helmet=null,head=null;
-  if(kind==='player'||kind==='boss'){
+  if(kind==='boss'){
    head=obj.getObjectByName('Head');
    helmet=new THREE.Group();const radius=kind==='player'?.42:.7;
    const shell=new THREE.Mesh(new THREE.SphereGeometry(radius,12,8),new THREE.MeshStandardMaterial({color:kind==='player'?0x162b3b:0x292c32,metalness:.45,roughness:.58}));shell.scale.set(1,.85,1.2);shell.castShadow=true;helmet.add(shell);
    const visor=new THREE.Mesh(new THREE.BoxGeometry(radius*1.5,radius*.25,radius*.22),kind==='player'?amber:red);visor.position.set(0,0,radius);helmet.add(visor);root.add(helmet);
   }
   const animation=createActorAnimation(mixer,actions,kind);
-  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,titanHD,pivotsHD,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
+  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,titanHD,pivotsHD,aegis,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
  }
  function actor(id,kind,x,y,angle,motion,dt){
   let a=actorMap.get(id);if(a&&a.kind!==kind){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);a=null;}
@@ -195,6 +199,7 @@ async function init(){
   if(motion.dead)a.root.rotation.y=Math.PI/2-angle;
   else a.root.rotation.y=dampAngle(a.root.rotation.y,Math.PI/2-angle,dt);
   a.animation.update({...motion,speed,reverse:dx*Math.cos(angle)+dy*Math.sin(angle)<-.001},dt);
+  if(a.aegis)animateAegis(a.aegis,{...motion,speed},a.age,dt);
   if(motion.shots!==undefined&&motion.shots!==a.lastShot){a.recoil=.055;a.lastShot=motion.shots;}
   a.recoil*=Math.exp(-dt*24);
   // Small visual recoil follows each real volley; collision and aim stay authoritative.
@@ -267,6 +272,6 @@ async function init(){
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
   renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
- state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V10 · BLENDER HD';
+ state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V11 · AEGIS-07 3D';
 }
 init().catch(failure);
