@@ -27,7 +27,7 @@ test('AEGIS-07 hero is genuine 3D mesh geometry with articulated limbs, not spri
 });
 test('AEGIS is rendered in original Three + Rapier game; astronaut hidden',()=>{
  const source=fs.readFileSync(path.join(root,'src/three-layer.mjs'),'utf8');
- assert.match(source,/kind==='player'\?createAegisHero\(\)/);
+ assert.match(source,/models\.aegis_v11\?.*\.clone\(true\):createAegisHero\(\)/);
  assert.match(source,/obj\.visible=false;root\.add\(aegis\)/);
  assert.match(source,/animateAegis\(a\.aegis/);
  assert.match(source,/state\.aegisMeshCount=total/);
