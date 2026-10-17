@@ -23,3 +23,6 @@
 
 /* PixiJS GPU sprites layer. Receives no touch/pointer input, so mobile controls remain native. */
 #pixi-stage{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;display:block;}
+
+/* V8: independent mobile weapon selector; overlay does not block the joystick. */
+#weaponSwitch{pointer-events:auto;position:absolute;right:125px;bottom:19px;width:74px;height:74px;border-radius:50%;border:2px solid #8eecff;color:#dbfcff;background:radial-gradient(circle at 28% 23%,#327d94,#102d44 70%,#071b27);box-shadow:0 0 16px #44c8f04d;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;user-select:none;touch-action:manipulation}#weaponSwitch b{font-size:30px;line-height:33px}#weaponSwitch span{font:900 9px system-ui;letter-spacing:.07em}@media(max-width:550px){#weaponSwitch{right:106px;bottom:17px;width:64px;height:64px}#weaponSwitch b{font-size:25px}}
