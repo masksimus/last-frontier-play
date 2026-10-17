@@ -32,17 +32,20 @@ try:
     page.locator('#weaponSwitch').dispatch_event('pointerdown',{'pointerId':11,'pointerType':'touch'})
     assert page.evaluate('window.__FRONTIER_QA__.get().weapon')=='railgun'
     if label!='desktop':
-     page.evaluate("""() => {
-       const el=document.querySelector('#stickZone'),r=el.getBoundingClientRect();
-       el.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,pointerId:51,pointerType:'touch',clientX:r.left+r.width/2+45,clientY:r.top+58}));
-     }""")
-     page.wait_for_timeout(460)
-     page.evaluate("""() => document.querySelector('#stickZone').dispatchEvent(new PointerEvent('pointerup',{bubbles:true,pointerId:51,pointerType:'touch'}))""")
+     rect=page.locator('#stickZone').bounding_box()
+     assert rect, 'Mobile joystick not visible'
+     tx=rect['x']+rect['width']*.77;ty=rect['y']+rect['height']*.40
+     cdp=context.new_cdp_session(page)
+     cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':tx,'y':ty}]})
+     try:
+      page.wait_for_function('(x)=>Math.abs(window.__FRONTIER_QA__.get().x-x)>8',arg=before['x'],timeout=15000)
+     finally:
+      cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
      after=page.evaluate('window.__FRONTIER_QA__.get()')
      assert (after['x']-before['x'])**2+(after['y']-before['y'])**2>64,(before,after)
     page.evaluate('window.__FRONTIER_QA__.spawnBoss()')
     page.evaluate('window.__FRONTIER_QA__.bossEnrage()')
-    page.wait_for_timeout(450)
+    page.wait_for_function('window.__FRONTIER_QA__.get().enemyProjectiles>0',timeout=16000)
     state=page.evaluate('window.__FRONTIER_QA__.get()')
     assert state['bosses']>0 and state['enemyProjectiles']>0,state
     assert 'ЯРОСТИ' in page.locator('#bossLabel').inner_text()
