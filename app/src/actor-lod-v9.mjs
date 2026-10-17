@@ -31,7 +31,9 @@ function mergeParts(){
   const leg=new THREE.BoxGeometry(.19,.45,.24);
   leg.translate(side*.15,.22,0);parts.push(leg);
  }
- const merged=mergeGeometries(parts);
+ const plain=parts.map(p=>p.index?p.toNonIndexed():p);
+ const merged=mergeGeometries(plain);
+ for(const p of plain)if(!parts.includes(p))p.dispose();
  for(const p of parts)p.dispose();
  if(!merged)throw Error('Unable to merge actor LOD mesh geometries');
  merged.computeVertexNormals();
