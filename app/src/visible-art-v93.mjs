@@ -14,7 +14,9 @@ const ember=()=>new THREE.MeshStandardMaterial({color:0xff5025,emissive:0xff2308
 const dark=()=>new THREE.MeshStandardMaterial({color:0x101e2b,metalness:.43,roughness:.6});
 export function createTitanArmor(root){
  const g=new THREE.Group();g.name='SiegeTitanArmoredV93';root.add(g);
- const armor=steel(),edge=rim(),glow=ember(),low=dark(),mats=[armor,edge,glow,low];
+ const armor=steel(),edge=rim(),glow=ember(),low=dark();
+ const orbitalMat=new THREE.MeshBasicMaterial({color:0xff3417,transparent:true,opacity:.9,toneMapped:false});
+ const mats=[armor,edge,glow,low,orbitalMat];
  // Proportions are in game-world meters, close to the existing 4.3m animated boss.
  plate(g,armor,0,2.5,-.08,1.6,1.7,1.2);
  plate(g,edge,0,3.03,.67,1.18,.28,.13);
@@ -30,6 +32,13 @@ export function createTitanArmor(root){
  const core=new THREE.Mesh(new THREE.IcosahedronGeometry(.42,1),glow);core.position.set(0,2.59,.82);g.add(core);
  const halo=new THREE.Mesh(new THREE.TorusGeometry(.57,.085,7,24),glow);
  halo.position.set(0,2.59,.87);g.add(halo);
+ // Bright horizontal ring is independent 3D geometry and stays readable from an angled camera.
+ const orbit=new THREE.Mesh(new THREE.TorusGeometry(2.18,.055,6,56),orbitalMat);
+ orbit.name='SiegeTitanCrimsonOrbit';orbit.rotation.x=-Math.PI/2;
+ orbit.position.y=1.52;g.add(orbit);
+ const orbitUpper=new THREE.Mesh(new THREE.TorusGeometry(1.6,.065,6,42),glow);
+ orbitUpper.name='SiegeTitanUpperEnergyOrbit';orbitUpper.rotation.x=-Math.PI/2;
+ orbitUpper.position.y=2.68;g.add(orbitUpper);
  const visor=plate(g,glow,0,3.83,.52,.96,.15,.12);
  plate(g,armor,0,4,.1,1.15,.34,.67);
  // Shoulder-mounted twin machine cannons, physically distinct from the skinned GLB.
@@ -48,6 +57,9 @@ export function createTitanArmor(root){
  function update(time,rage=false){
   glow.emissiveIntensity=(rage?5:2.5)+Math.sin(time*5)*.45;
   halo.rotation.z=time*(rage?2:1);
+  orbit.rotation.z=.14*Math.sin(time*2);
+  orbitUpper.rotation.z=.18*Math.cos(time*1.4);
+  orbitalMat.opacity=rage?.95:.64;
   core.scale.setScalar(1+Math.sin(time*7)*.05);
  }
  return {group:g,core,halo,visor,mats,update,
