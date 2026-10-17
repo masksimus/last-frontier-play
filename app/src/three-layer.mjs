@@ -10,9 +10,10 @@ import { createActorAnimation, dampAngle } from './actor-animation-v9.mjs';
 import { createConcreteMaps, weatherMetal } from './surfaces-v9.mjs';
 import { createCinematicIndustrial, detailBudget } from './cinematic-v9.mjs';
 import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
+import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.1.0-rc.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.3.0-art.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -37,22 +38,22 @@ async function init(){
  document.querySelector('#stage').after(renderer.domElement);
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,detailBudget(touch).maxPixelRatio));
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
- scene=new THREE.Scene();scene.background=new THREE.Color(0x0c1620);scene.fog=new THREE.FogExp2(0x182535,.014);
- const pmrem=new THREE.PMREMGenerator(renderer);const environment=new RoomEnvironment();scene.environment=pmrem.fromScene(environment,.05).texture;scene.environmentIntensity=.85;environment.dispose();pmrem.dispose();
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x080e18);scene.fog=new THREE.FogExp2(0x142033,.018);
+ const pmrem=new THREE.PMREMGenerator(renderer);const environment=new RoomEnvironment();scene.environment=pmrem.fromScene(environment,.05).texture;scene.environmentIntensity=.63;environment.dispose();pmrem.dispose();
  camera=new THREE.OrthographicCamera(-12,12,7,-7,.1,100);
  const loader=new GLTFLoader();
  const files=[...new Set([...PROPS.filter(p=>!p.procedural).map(p=>p.model),...Object.values(actorModels),'chimney_detailed','hangar_smallA','pipe_straight','pipe_cornerRound','rail','supports_high','turret_double','weapon_rifle','weapon_gun','craft_speederA','rock_crystals'])];
  const models=Object.fromEntries(await Promise.all(files.map(async name=>[name,await loader.loadAsync(`assets/models/${name}.glb`)])));
  state.models=files.length;state.animationClips=Object.fromEntries(Object.entries(actorModels).map(([kind,name])=>[kind,models[name].animations.map(a=>a.name)]));
  physics=await (await import('./physics-v9.mjs')).createPhysics();bridge.enemyDirection=createNavigation();bridge.wallHit=(a,b)=>physics?.wallHit(a,b);bridge.move=(entity,previous)=>physics?.move(entity,previous);
- const hemi=new THREE.HemisphereLight(0xb5cee2,0x3d3330,1.65);scene.add(hemi);
- const moon=new THREE.DirectionalLight(0xc6deed,3.5);moon.position.set(8,23,7);moon.castShadow=true;
+ const hemi=new THREE.HemisphereLight(0x7caccd,0x1c1113,1.02);scene.add(hemi);
+ const moon=new THREE.DirectionalLight(0x89bfe8,2.25);moon.position.set(8,23,7);moon.castShadow=true;
  const shadowSize=matchMedia('(pointer:coarse)').matches?1024:1536;
  moon.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(moon.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:1,far:65});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;moon.shadow.intensity=.72;scene.add(moon,moon.target);
- const warm=new THREE.DirectionalLight(0xff843c,1.7);warm.position.set(40,8,-10);scene.add(warm);
+ const warm=new THREE.DirectionalLight(0xff7633,2.2);warm.position.set(40,8,-10);scene.add(warm);
  const concrete=createConcreteMaps(renderer);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:0xc4c9c9,roughness:1,metalness:.08}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:0x617889,roughness:.86,metalness:.16}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
  const steel=weatherMetal(new THREE.MeshStandardMaterial({color:0x4a5862,metalness:.68,roughness:.5}));
  const amber=new THREE.MeshStandardMaterial({color:0xffb24e,emissive:0xff8020,emissiveIntensity:2});
  const blue=new THREE.MeshStandardMaterial({color:0x79eaff,emissive:0x16cfff,emissiveIntensity:3});
@@ -111,7 +112,9 @@ async function init(){
  // Keep instance geometry separate from static GLTF merge passes.
  const cinematic=createCinematicIndustrial(scene,{touch});
  const actorLOD=createActorLOD(scene);
+ const landmarks=createIndustrialLandmarks(scene);
  state.cinematic=cinematic.summary;
+ state.visibleArt={landmarks:landmarks.summary.landmarks,reactorRings:landmarks.summary.rings,materialBatches:landmarks.summary.materialBatches};
  // Ground-projected lighting cards are independent effects, never background art.
  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=64;const gc=glowCanvas.getContext('2d'),gradient=gc.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'#ffffff');gradient.addColorStop(.22,'#ffffff88');gradient.addColorStop(1,'#ffffff00');gc.fillStyle=gradient;gc.fillRect(0,0,64,64);
  const glowTex=new THREE.CanvasTexture(glowCanvas);
@@ -126,8 +129,9 @@ async function init(){
   const obj=clone(models[actorModels[kind]].scene);const bounds=new THREE.Box3().setFromObject(obj),height=bounds.max.y-bounds.min.y;
   obj.scale.setScalar(heights[kind]/height);obj.position.y=-bounds.min.y*obj.scale.y;
   const root=new THREE.Group();root.add(obj);scene.add(root);
+  const armorV93=kind==='boss'?createTitanArmor(root):null;
   obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();o.material.metalness=kind==='player'||kind==='boss'?.42:.18;o.material.roughness=.55;
-   o.material.color.set(kind==='player'?0xc5d8e5:kind==='boss'?0xc5b4aa:0xd3b2ad);
+   o.material.color.set(kind==='player'?0x8db7d3:kind==='boss'?0x85717b:0xc27979);
   }});
   const glowMat=kind==='player'?blue:red;
   // Separate armour plates, visor and backpack customize the rig without replacing it.
@@ -144,12 +148,13 @@ async function init(){
    const visor=new THREE.Mesh(new THREE.BoxGeometry(radius*1.5,radius*.25,radius*.22),kind==='player'?amber:red);visor.position.set(0,0,radius);helmet.add(visor);root.add(helmet);
   }
   const animation=createActorAnimation(mixer,actions,kind);
-  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
+  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
  }
  function actor(id,kind,x,y,angle,motion,dt){
   let a=actorMap.get(id);if(a&&a.kind!==kind){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);a=null;}
   if(!a){a=pools[kind].pop()||makeActor(kind);actorMap.set(id,a);a.animation.reset();a.root.visible=true;a.age=0;a.lastX=x;a.lastY=y;a.lastShot=motion.shots||0;a.recoil=0;a.root.rotation.y=Math.PI/2-angle;}
   a.seen=true;a.age+=dt;
+  a.armorV93?.update(a.age,!!motion.enraged);
   const dx=(x-a.lastX)/UNIT,dy=(y-a.lastY)/UNIT;
   const speed=dt>0?Math.hypot(dx,dy)/dt:0;
   a.lastX=x;a.lastY=y;
@@ -196,13 +201,14 @@ async function init(){
   for(const a of actorMap.values())a.seen=false;
   const t=game?.time||now/1000;
   cinematic.update(t,state.quality==='performance');
+  landmarks.update(t);
   const hero=actor('player','player',p.x,p.y,facing||-.5,{moving:motion?.moving,firing:motion?.firing>0,hit:motion?.hit>0,shots:game?.visualShots||0},dt);
   const visible=[];
   if(game){for(const e of game.enemies){viewSphere.center.set(e.x/UNIT,1,e.y/UNIT);if(frustum.intersectsSphere(viewSphere))visible.push(e);}}
   const detailed=selectDetailedActors(visible,p,touch,state.quality==='performance');
   const lower=[];
   for(const e of visible){
-   if(detailed.has(e.id))actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0},dt);
+   if(detailed.has(e.id))actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0,enraged:e.type==='boss'&&e.hp<=e.maxhp*.5},dt);
    else lower.push(e);
   }
   state.lodActors=actorLOD.draw(lower,p);
@@ -228,6 +234,6 @@ async function init(){
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
   renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
- state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.1 · СЕКТОР A-7';
+ state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.3 · АРТ-ОБНОВЛЕНИЕ';
 }
 init().catch(failure);

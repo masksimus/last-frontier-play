@@ -1,0 +1,55 @@
+name: Last Frontier V9.3 - Visible 3D Boss Art
+on:
+  push:
+    branches: [feat/v9-3-visible-boss-20261017]
+    paths: ['app/**', '.github/workflows/v9-3-visible.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontier-v9-3-visible
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned open-source dependencies
+        working-directory: app
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify V9.3 boss geometry, physics, 3D scene and production package
+        working-directory: app
+        run: |
+          node --check src/visible-art-v93.mjs
+          node --check src/three-layer.mjs
+          npm run verify
+      - name: Audit GLB geometry and license hashes
+        working-directory: app
+        run: python3 scripts/audit_glb_geometry.py --output glb-triangle-report.json
+      - name: Install browser dependencies
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+      - name: Test actual V9.3 WebGL scene in desktop and mobile, including fallback
+        working-directory: app
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-frontier-v9-3-real-3d-art-and-screenshots
+          path: |
+            app/browser-v9-evidence/
+            app/glb-triangle-report.json
+            app/last-frontier-v9.1-rc1-yandex.zip
+          retention-days: 14
+          if-no-files-found: warn
