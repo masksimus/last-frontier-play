@@ -1,0 +1,41 @@
+name: Last Frontier V10 - Mobile Visual Smoke (Blender)
+on:
+  push:
+    branches: [feat/v10-blender-real-assets-20261018]
+    paths: ['.github/workflows/v10-mobile-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Build the real GLB+PBR Three.js scene
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Install Chromium
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+      - name: Render boss battle on actual 920x420 WebGL mobile viewport
+        working-directory: app
+        env:
+          V9_PROFILE: android-landscape-emulated
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v10-real-mobile-blender-boss-screenshot
+          path: app/browser-v9-evidence/
+          retention-days: 14
+          if-no-files-found: warn
