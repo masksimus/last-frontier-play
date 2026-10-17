@@ -233,9 +233,9 @@ async function init(){
   const p=game?.player||{x:1100,y:800};const target=new THREE.Vector3(p.x/UNIT,0,p.y/UNIT-1.2);
   if(!game){
    // Hero presentation uses the SAME 3D GLB: a closer angle, no portrait image, no flat sprite.
-   target.set(p.x/UNIT-(innerWidth>750?2.0:0),1.13,p.y/UNIT+.10);
+   target.set(p.x/UNIT-(innerWidth>750?1.6:0),1.13,p.y/UNIT+.10);
    camera.position.copy(target).add(new THREE.Vector3(3.4,3.0,6.1));
-   camera.zoom=innerWidth>750?1.95:2.55;
+   camera.zoom=innerWidth>750?3.15:3.3;
   }else{
    camera.position.copy(target).add(new THREE.Vector3(0,22,28.16));
    camera.zoom=1;
@@ -250,7 +250,7 @@ async function init(){
   const t=game?.time||now/1000;
   cinematic.update(t,state.quality==='performance');
   landmarks.update(t);
-  const hero=actor('player','player',p.x,p.y,facing||-.5,{moving:motion?.moving,firing:motion?.firing>0,hit:motion?.hit>0,shots:game?.visualShots||0},dt);
+  const hero=actor('player','player',p.x,p.y,(game?(facing||-.5):Math.PI/2),{moving:motion?.moving,firing:motion?.firing>0,hit:motion?.hit>0,shots:game?.visualShots||0},dt);
   const visible=[];
   if(game){for(const e of game.enemies){viewSphere.center.set(e.x/UNIT,1,e.y/UNIT);if(frustum.intersectsSphere(viewSphere))visible.push(e);}}
   const detailed=selectDetailedActors(visible,p,touch,state.quality==='performance');
@@ -261,7 +261,7 @@ async function init(){
   }
   state.lodActors=actorLOD.draw(lower,p);
   state.detailedActors=detailed.size;
-  if(!game){actor('menu-boss','boss',1370,690,2.4,{moving:false},dt);actor('menu-brute','brute',890,620,.4,{moving:true},dt);}
+  // Menu showroom features the playable AEGIS-07 alone, not a cropped boss.
   for(const f of fallen){actor(f.id,f.type,f.x,f.y,f.angle-Math.PI/2,{dead:true,life:f.life},dt);}
   for(const [id,a] of actorMap){if(!a.seen){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);}}
   // Budget expensive dynamic shadow draws, retaining ground contact for every actor
