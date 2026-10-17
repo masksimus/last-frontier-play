@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 
 export const DETAIL_BUDGETS=Object.freeze({
-  touch:Object.freeze({debris:78,puddles:24,embers:28,lights:2,beams:4,maxPixelRatio:1}),
-  desktop:Object.freeze({debris:180,puddles:60,embers:64,lights:3,beams:6,maxPixelRatio:1.5}),
+  touch:Object.freeze({debris:60,puddles:14,embers:20,lights:0,beams:2,maxPixelRatio:1}),
+  desktop:Object.freeze({debris:130,puddles:30,embers:40,lights:1,beams:3,maxPixelRatio:1.25}),
 });
 export function detailBudget(isTouch){return DETAIL_BUDGETS[isTouch?'touch':'desktop'];}
 export function seededRandom(seed=7717){
@@ -50,14 +50,14 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
     rubble.setColorAt(i,rubbleColors[Math.floor(random()*rubbleColors.length)]);
   }
   rubble.instanceMatrix.needsUpdate=true;rubble.instanceColor.needsUpdate=true;
-  group.add(rubble);
+  rubble.frustumCulled=false;group.add(rubble);
 
-  // MeshPhysicalMaterial + clearcoat draws actual geometry reflecting scene IBL.
-  // Cheap wet-floor look, NOT expensive screen-space reflections.
+  // Real wet ground meshes with standard physically based metalness/roughness.
+  // Clearcoat and transparent physical reflection were too costly in SwiftShader.
   const puddleGeom=new THREE.CircleGeometry(1,14);
-  const puddleMat=new THREE.MeshPhysicalMaterial({
-    color:0x344756,metalness:0,roughness:.13,clearcoat:1,clearcoatRoughness:.08,
-    transparent:true,opacity:.53,depthWrite:false,side:THREE.DoubleSide
+  const puddleMat=new THREE.MeshStandardMaterial({
+    color:0x344a5b,metalness:.22,roughness:.22,
+    transparent:true,opacity:.4,depthWrite:false,side:THREE.DoubleSide
   });
   const puddles=new THREE.InstancedMesh(puddleGeom,puddleMat,budget.puddles);
   puddles.name='WetConcretePuddles';puddles.castShadow=false;
@@ -68,29 +68,30 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
     dummy.scale.set(a,b,1);dummy.updateMatrix();puddles.setMatrixAt(i,dummy.matrix);
   }
   puddles.instanceMatrix.needsUpdate=true;
-  group.add(puddles);
+  puddles.frustumCulled=false;group.add(puddles);
 
   // Localized industrial floodlights without real-time spotlight shadow passes.
   // 2 on touch, 3 on desktop; emissive fixture + cone mesh mimics atmospheric fog.
   const beamGeometry=new THREE.ConeGeometry(1,1,12,1,true);
   const fixtureGeometry=new THREE.SphereGeometry(.16,10,6);
   const lamps=[];
-  for(let i=0;i<budget.lights;i++){
+  for(let i=0;i<budget.beams;i++){
     const p=BEACONS[i],color=new THREE.Color(p.color);
     const bulb=new THREE.Mesh(fixtureGeometry,new THREE.MeshBasicMaterial({color, toneMapped:false}));
     bulb.position.set(p.x,5.05,p.z);
     group.add(bulb);
-    const light=new THREE.PointLight(color,2.25,7.5,2);
-    light.position.copy(bulb.position);light.castShadow=false;
-    group.add(light);
-    lamps.push({light,phase:i*1.71});
+    if(i<budget.lights){
+      const light=new THREE.PointLight(color,1.4,5.5,2);
+      light.position.copy(bulb.position);light.castShadow=false;
+      group.add(light);lamps.push({light,phase:i*1.71});
+    }
   }
   for(let i=0;i<budget.beams;i++){
     const p=BEACONS[i],beam=new THREE.Mesh(beamGeometry,new THREE.MeshBasicMaterial({
-      color:p.color,transparent:true,opacity:touch?.046:.058,
+      color:p.color,transparent:true,opacity:touch?.023:.028,
       blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide
     }));
-    beam.position.set(p.x,2.5,p.z);beam.scale.set(2.35,5,2.35);
+    beam.position.set(p.x,2.5,p.z);beam.scale.set(1.45,4.5,1.45);
     beam.renderOrder=1;group.add(beam);
   }
 
@@ -120,8 +121,8 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
         .4+travel*.7,.5+travel*.7,.4+travel*.7);
     }
     embers.instanceMatrix.needsUpdate=true;
-    for(const lamp of lamps)lamp.light.intensity=performance?1.2:2.05+
-      .2*Math.sin(time*4.5+lamp.phase);
+    for(const lamp of lamps)lamp.light.intensity=performance?0:1.4+
+      .12*Math.sin(time*4.5+lamp.phase);
   }
   function dispose(){
     group.removeFromParent();
