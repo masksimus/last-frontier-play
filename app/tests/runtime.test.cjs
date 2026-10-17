@@ -16,6 +16,8 @@ element('stage').getContext=()=>ctxProxy;
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/core.js'),'utf8'),sb,{filename:'core.js'});
 windowObj.FrontierCore=sb.FrontierCore;
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/animation.js'),'utf8'),sb,{filename:'animation.js'});
+vm.runInNewContext(fs.readFileSync(path.join(root,'src/combat-v8.js'),'utf8'),sb,{filename:'combat-v8.js'});
+windowObj.FrontierCombatV8=sb.FrontierCombatV8;
 vm.runInNewContext(fs.readFileSync(path.join(root,'src/game.js'),'utf8'),sb,{filename:'game.js'});
 function tick(n=1){for(let i=0;i<n;i++){now+=16;if(frame)frame(now)}}
 
