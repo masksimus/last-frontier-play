@@ -207,7 +207,7 @@ async function init(){
   }
   state.lodActors=actorLOD.draw(lower,p);
   state.detailedActors=detailed.size;
-  else {actor('menu-boss','boss',1370,690,2.4,{moving:false},dt);actor('menu-brute','brute',890,620,.4,{moving:true},dt);}
+  if(!game){actor('menu-boss','boss',1370,690,2.4,{moving:false},dt);actor('menu-brute','brute',890,620,.4,{moving:true},dt);}
   for(const f of fallen){actor(f.id,f.type,f.x,f.y,f.angle-Math.PI/2,{dead:true,life:f.life},dt);}
   for(const [id,a] of actorMap){if(!a.seen){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);}}
   // Budget expensive dynamic shadow draws, retaining ground contact for every actor
