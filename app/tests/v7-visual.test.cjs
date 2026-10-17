@@ -13,6 +13,6 @@ t('local character lighting has bounded budget for mobile',()=>{
  const code=fs.readFileSync(path.join(root,'src/game.js'),'utf8');
  a.match(code,/function frontierLocalLights\(/);
  a.match(code,/const max=W<650\?7:14/);
- a.match(code,/visualVersion:8/);
+ a.match(code,/visualVersion:9/);
  a.match(code,/fixed 3\/4 painterly poses/);
 });

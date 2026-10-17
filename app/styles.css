@@ -26,3 +26,14 @@
 
 /* V8: independent mobile weapon selector; overlay does not block the joystick. */
 #weaponSwitch{pointer-events:auto;position:absolute;right:125px;bottom:19px;width:74px;height:74px;border-radius:50%;border:2px solid #8eecff;color:#dbfcff;background:radial-gradient(circle at 28% 23%,#327d94,#102d44 70%,#071b27);box-shadow:0 0 16px #44c8f04d;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;user-select:none;touch-action:manipulation}#weaponSwitch b{font-size:30px;line-height:33px}#weaponSwitch span{font:900 9px system-ui;letter-spacing:.07em}@media(max-width:550px){#weaponSwitch{right:106px;bottom:17px;width:64px;height:64px}#weaponSwitch b{font-size:25px}}
+
+/* V9 world is an independent 3D canvas, with native touch controls above it. */
+#renderStatus{position:absolute;bottom:12px;right:14px;z-index:3;color:#8caab9;font:700 9px system-ui;letter-spacing:.13em;pointer-events:none}
+#home{background:linear-gradient(90deg,#030b13e8,#030c1399 47%,#030c1333);backdrop-filter:none}
+#home .menuWrap{margin-right:42%;width:min(48%,520px)}
+#home .heroBadge{display:none}#home .heroTitle{font-size:clamp(38px,5.5vw,78px);text-align:left;align-self:flex-start}#home .subtitle{align-self:flex-start}
+#home .menuWrap p{text-align:left}#home .eyebrow{align-self:flex-start}
+#missionPanel{background:#071018b8;backdrop-filter:none;border-left-color:#42d9ec}
+#toast{top:24%;font-size:12px;pointer-events:none}
+@media(max-width:600px){#home .menuWrap{width:100%;margin:0}#home{background:#030b13b0}#home .heroTitle{font-size:52px;align-self:center;text-align:center}#home .subtitle,#home .eyebrow{align-self:center}#home .menuWrap p{text-align:center}#toast{font-size:10px;letter-spacing:.04em;max-width:95%;white-space:normal;text-align:center}#renderStatus{bottom:6px;font-size:8px}}
+@media(max-height:500px){#home .heroTitle{font-size:42px}#home .menuWrap{gap:4px}#home .menuWrap p{font-size:12px}#home .featureRow{display:none}#controls{bottom:8px}#stats{font-size:9px}#bars{margin-top:4px}#waveTicker{top:108px}#bossBar{margin-top:4px}#toast{top:31%;padding:7px 12px}}

@@ -1,17 +1,21 @@
 {
-  "name": "last-frontier-v6",
-  "version": "6.0.0",
+  "name": "last-frontier-v9",
+  "version": "9.1.0-rc.1",
   "private": true,
   "scripts": {
     "build": "vite build && python3 scripts/package_dist.py",
     "test": "node --test tests/*.test.cjs",
-    "verify": "npm run test && npm run build"
+    "verify": "npm run test && npm run build",
+    "test:browser": "node tests/browser-v9.mjs"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "0.19.2",
+    "howler": "2.2.4",
     "pixi.js": "^8.22.0",
-    "howler": "^2.2.4"
+    "three": "0.180.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "vite": "^7.1.0"
   }
 }

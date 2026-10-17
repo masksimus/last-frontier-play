@@ -1,0 +1,45 @@
+name: Last Frontier V9 - isolated acceptance
+on:
+  push:
+    branches: [feat/v9-3d-industrial]
+    paths: ['app/**', '.github/workflows/v9-staging.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/v9-staging.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v9-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: app
+      - run: npm run verify
+        working-directory: app
+      - run: npx playwright install --with-deps chromium
+        working-directory: app
+      - run: npm run test:browser
+        working-directory: app
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-frontier-v9-html5-and-evidence
+          path: |
+            app/last-frontier-v9.1-rc1-yandex.zip
+            app/browser-v9-evidence/
+          retention-days: 30
