@@ -31,7 +31,10 @@ jobs:
       - name: Install exact Node dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify geometry, game rules and distributable
-        run: npm run verify
+        run: |
+          npm run verify
+          test -s dist/assets/models/AEGIS_07_V11.glb
+          test -s assets/models/AEGIS_07_V11.glb
       - name: Install headless Chromium
         run: npx playwright install --with-deps chromium
       - name: Play complete V11 desktop, touch and fallback acceptance
