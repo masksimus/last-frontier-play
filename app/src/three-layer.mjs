@@ -134,7 +134,7 @@ async function init(){
   const root=new THREE.Group();root.add(obj);scene.add(root);
   // AEGIS replaces the rendered astronaut with actual meshes; existing mixer remains inert behind it.
   const aegis=kind==='player'?createAegisHero():null;
-  if(aegis){obj.visible=false;root.add(aegis);state.aegisHero=true;}
+  if(aegis){obj.visible=false;root.add(aegis);state.aegisHero=true;let total=0;aegis.traverse(o=>{if(o.isMesh){total++;if(!o.geometry?.isBufferGeometry)throw Error('AEGIS must be real mesh geometry');}});state.aegisMeshCount=total;}
   const armorV93=kind==='boss'?createTitanArmor(root):null;
   let titanHD=null,pivotsHD=null;
   if(kind==='boss'&&models.siege_titan_hd){
