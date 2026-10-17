@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 2e6f7d2c890d20c76911026846f89f31257edc7a
+          ref: 37a36847cd85102981fdf521d6fb62d45b45173b
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -63,6 +63,7 @@ jobs:
           (root/'build-manifest.json').write_bytes(raw)
           (root/'.nojekyll').touch()
           shutil.copytree('app/dist',root/'v9')
+          shutil.copy2('app/last-frontier-v9.1-rc1-yandex.zip',root/'v9/last-frontier-v9.1-rc1-yandex.zip')
           for item in manifest['files']:
               assert hashlib.sha256((root/item['path']).read_bytes()).hexdigest()==item['sha256']
           assert (root/'v9/index.html').is_file()
