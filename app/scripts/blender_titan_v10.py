@@ -22,7 +22,8 @@ def material(name,base,met,rough,emission=None,tex=None):
  bs.inputs['Metallic'].default_value=met
  bs.inputs['Roughness'].default_value=rough
  if emission:
-  bs.inputs['Emission'].default_value=(*emission,1)
+  emission_input=bs.inputs.get('Emission Color') or bs.inputs.get('Emission')
+  if emission_input:emission_input.default_value=(*emission,1)
   if 'Emission Strength' in bs.inputs:bs.inputs['Emission Strength'].default_value=3.5
  if tex:
   nodes=m.node_tree.nodes;links=m.node_tree.links
