@@ -25,9 +25,10 @@ try{
    if(profile.missing)await page.route('**/models/Enemy_Large.glb',r=>r.abort());
    await page.goto('http://127.0.0.1:4239/',{waitUntil:'load'});
    await page.waitForFunction(()=>!document.querySelector('#start').disabled,{timeout:45000});
-   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));assert(await page.evaluate(()=>window.FrontierV9.status().highDetailTitan),'Blender HD GLB not loaded');result.checks.push('original Blender textured 3D boss model and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'10.0.0-blender.1');}
+   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));assert(await page.evaluate(()=>window.FrontierV9.status().highDetailTitan),'Blender HD GLB not loaded');result.checks.push('original Blender textured 3D boss model and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'11.0.0-aegis-real-3d');}
    await page.locator('#start').click();
    assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().mode),'running');
+   if(!profile.fallback&&!profile.missing){const h=await page.evaluate(()=>window.FrontierV9.status());assert(h.aegisHero&&h.aegisGLB&&h.aegisMeshCount>=75,'Exported GLB main character missing');result.checks.push('AEGIS-07 visible 3D mesh, '+h.aegisMeshCount+' articulated parts');}
    await page.locator('#weaponSwitch').dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch'});
    assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().weapon),'shotgun');
    await page.locator('#weaponSwitch').dispatchEvent('pointerdown',{pointerId:92,pointerType:'touch'});
