@@ -8,9 +8,11 @@ import { createNavigation } from './navigation-v9.mjs';
 import { PROPS, UNIT, clamp, screenInput } from './world-v9.mjs';
 import { createActorAnimation, dampAngle } from './actor-animation-v9.mjs';
 import { createConcreteMaps, weatherMetal } from './surfaces-v9.mjs';
+import { createCinematicIndustrial, detailBudget } from './cinematic-v9.mjs';
+import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.1.0-rc.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.1.0-rc.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -28,11 +30,12 @@ function failure(error){
 }
 async function init(){
  if(window.__FRONTIER_TEST_FORCE_CANVAS__)throw Error('Requested Canvas fallback');
- renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+ const touch=matchMedia('(pointer:coarse)').matches;
+ renderer=new THREE.WebGLRenderer({antialias:!touch,alpha:false,powerPreference:'high-performance'});
  renderer.domElement.id='three-stage';renderer.domElement.setAttribute('aria-hidden','true');
  renderer.domElement.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:1';
  document.querySelector('#stage').after(renderer.domElement);
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,detailBudget(touch).maxPixelRatio));
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
  scene=new THREE.Scene();scene.background=new THREE.Color(0x0c1620);scene.fog=new THREE.FogExp2(0x182535,.014);
@@ -105,6 +108,10 @@ async function init(){
  });
  for(const o of remove)o.removeFromParent();
  for(const b of batches.values()){const geometry=mergeGeometries(b.geometries);if(geometry){const mesh=new THREE.Mesh(geometry,b.material);mesh.castShadow=b.shadow;mesh.receiveShadow=true;scene.add(mesh);}for(const g of b.geometries)g.dispose();}
+ // Keep instance geometry separate from static GLTF merge passes.
+ const cinematic=createCinematicIndustrial(scene,{touch});
+ const actorLOD=createActorLOD(scene);
+ state.cinematic=cinematic.summary;
  // Ground-projected lighting cards are independent effects, never background art.
  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=64;const gc=glowCanvas.getContext('2d'),gradient=gc.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'#ffffff');gradient.addColorStop(.22,'#ffffff88');gradient.addColorStop(1,'#ffffff00');gc.fillStyle=gradient;gc.fillRect(0,0,64,64);
  const glowTex=new THREE.CanvasTexture(glowCanvas);
@@ -178,7 +185,7 @@ async function init(){
   if(game!==currentGame){for(const [id,a] of actorMap){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);}actorMap.clear();currentGame=game;}
   const now=performance.now();if(previousTime){state.frameMs=state.frameMs*.95+(now-previousTime)*.05;}previousTime=now;
   if(mode==='running'&&state.frameMs>38)slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
-  if(slowFrames>90&&state.quality!=='performance'){qualityScale=.85;renderer.setPixelRatio(.85);renderer.shadowMap.enabled=false;state.quality='performance';slowFrames=0;}
+  if(slowFrames>(touch?16:24)&&state.quality!=='performance'){qualityScale=.85;renderer.setPixelRatio(.85);renderer.shadowMap.enabled=false;state.quality='performance';slowFrames=0;}
   const p=game?.player||{x:1100,y:800};const target=new THREE.Vector3(p.x/UNIT,0,p.y/UNIT-1.2);
   camera.position.copy(target).add(new THREE.Vector3(0,22,28.16));camera.lookAt(target);
   // Quantize the shadow projection to texels to avoid crawling on slow movement.
@@ -188,9 +195,19 @@ async function init(){
   ring.position.set(p.x/UNIT,.035,p.y/UNIT);selectionGlow.position.set(p.x/UNIT,1,p.y/UNIT);
   for(const a of actorMap.values())a.seen=false;
   const t=game?.time||now/1000;
+  cinematic.update(t,state.quality==='performance');
   const hero=actor('player','player',p.x,p.y,facing||-.5,{moving:motion?.moving,firing:motion?.firing>0,hit:motion?.hit>0,shots:game?.visualShots||0},dt);
-  if(game){for(const e of game.enemies){viewSphere.center.set(e.x/UNIT,1,e.y/UNIT);if(!frustum.intersectsSphere(viewSphere))continue;actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0},dt);}}
-  else {actor('menu-boss','boss',1370,690,2.4,{moving:false},dt);actor('menu-brute','brute',890,620,.4,{moving:true},dt);}
+  const visible=[];
+  if(game){for(const e of game.enemies){viewSphere.center.set(e.x/UNIT,1,e.y/UNIT);if(frustum.intersectsSphere(viewSphere))visible.push(e);}}
+  const detailed=selectDetailedActors(visible,p,touch,state.quality==='performance');
+  const lower=[];
+  for(const e of visible){
+   if(detailed.has(e.id))actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0},dt);
+   else lower.push(e);
+  }
+  state.lodActors=actorLOD.draw(lower,p);
+  state.detailedActors=detailed.size;
+  if(!game){actor('menu-boss','boss',1370,690,2.4,{moving:false},dt);actor('menu-brute','brute',890,620,.4,{moving:true},dt);}
   for(const f of fallen){actor(f.id,f.type,f.x,f.y,f.angle-Math.PI/2,{dead:true,life:f.life},dt);}
   for(const [id,a] of actorMap){if(!a.seen){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);}}
   // Budget expensive dynamic shadow draws, retaining ground contact for every actor
@@ -209,7 +226,7 @@ async function init(){
   n=0;for(const e of particles){if(n>=220)break;instance(sparks,n++,e.x/UNIT,.25+(1-e.l/.55)*.8,e.y/UNIT,.035,.035,.035,0,e.color);}sparks.count=n;sparks.instanceMatrix.needsUpdate=true;if(sparks.instanceColor)sparks.instanceColor.needsUpdate=true;
   n=0;for(const e of fx){if(n>=fxPool.length)break;const s=fxPool[n++],life=e.life/e.total;s.visible=true;s.position.set(e.x/UNIT,e.type==='smoke'?1.4:1,e.y/UNIT);s.material.map=fxTextures[e.type];s.material.opacity=(e.type==='smoke'?.4:1)*Math.min(1,life*3);s.material.blending=e.type==='smoke'?THREE.NormalBlending:THREE.AdditiveBlending;s.material.color.set(e.type==='smoke'?0x7d858e:0xffffff);const size=e.size/UNIT*(1+(1-life)*.8);s.scale.set(size,size,1);}for(;n<fxPool.length;n++)fxPool[n].visible=false;
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
-  renderer.render(scene,camera);state.actors=actorMap.size;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
+  renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
  state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.1 · СЕКТОР A-7';
 }
