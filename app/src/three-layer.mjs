@@ -183,7 +183,7 @@ async function init(){
   if(game!==currentGame){for(const [id,a] of actorMap){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);}actorMap.clear();currentGame=game;}
   const now=performance.now();if(previousTime){state.frameMs=state.frameMs*.95+(now-previousTime)*.05;}previousTime=now;
   if(mode==='running'&&state.frameMs>38)slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
-  if(slowFrames>90&&state.quality!=='performance'){qualityScale=.85;renderer.setPixelRatio(.85);renderer.shadowMap.enabled=false;state.quality='performance';slowFrames=0;}
+  if(slowFrames>(touch?16:24)&&state.quality!=='performance'){qualityScale=.85;renderer.setPixelRatio(.85);renderer.shadowMap.enabled=false;state.quality='performance';slowFrames=0;}
   const p=game?.player||{x:1100,y:800};const target=new THREE.Vector3(p.x/UNIT,0,p.y/UNIT-1.2);
   camera.position.copy(target).add(new THREE.Vector3(0,22,28.16));camera.lookAt(target);
   // Quantize the shadow projection to texels to avoid crawling on slow movement.
