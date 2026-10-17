@@ -25,7 +25,7 @@ try{
    if(profile.missing)await page.route('**/models/Enemy_Large.glb',r=>r.abort());
    await page.goto('http://127.0.0.1:4239/',{waitUntil:'load'});
    await page.waitForFunction(()=>!document.querySelector('#start').disabled,{timeout:45000});
-   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));result.checks.push('all GLB models and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'9.1.0-rc.1');}
+   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));result.checks.push('all GLB models and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'9.3.0-art.1');}
    await page.locator('#start').click();
    assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().mode),'running');
    await page.locator('#weaponSwitch').dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch'});
@@ -50,6 +50,11 @@ try{
    }
    await page.evaluate(()=>window.__FRONTIER_QA__.forceUpgrade());await page.locator('#cards button').first().click();assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().mode),'running');result.checks.push('upgrade choice resumes play');
    await page.evaluate(()=>window.__FRONTIER_QA__.clearWave());await page.waitForFunction(()=>window.__FRONTIER_QA__.get().mode==='upgrading');await page.locator('#cards button').first().click();assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().wave),2);result.checks.push('wave completion');
+   if(!profile.fallback&&!profile.missing){
+     const art=await page.evaluate(()=>window.FrontierV9.status().visibleArt);
+     assert.equal(art.landmarks,2);assert.equal(art.reactorRings,2);
+     result.checks.push('two new industrial landmarks rendered as 3D geometry');
+   }
    await page.evaluate(()=>{window.__FRONTIER_QA__.spawnBoss();window.__FRONTIER_QA__.bossEnrage();});
    await page.waitForFunction(()=>window.__FRONTIER_QA__.get().enemyProjectiles>0,{timeout:20000});assert.match(await page.locator('#bossLabel').innerText(),/ЯРОСТИ/);result.checks.push('boss rage and projectiles');
    if(profile.name==='desktop'){
