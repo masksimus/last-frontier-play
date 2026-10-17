@@ -15,7 +15,7 @@ DIST = ROOT / 'dist'
 assert (DIST / 'index.html').is_file(), 'Vite output missing index.html'
 copytree(ROOT / 'assets', DIST / 'assets', dirs_exist_ok=True)
 (DIST / 'src').mkdir(exist_ok=True)
-for name in ('core.js', 'animation.js', 'game.js'):
+for name in ('core.js', 'animation.js', 'combat-v8.js', 'game.js'):
     copy2(ROOT / 'src' / name, DIST / 'src' / name)
 
 notices = DIST / 'THIRD_PARTY_LICENSES'
