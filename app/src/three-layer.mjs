@@ -8,12 +8,13 @@ import { createNavigation } from './navigation-v9.mjs';
 import { PROPS, UNIT, clamp, screenInput } from './world-v9.mjs';
 import { createActorAnimation, dampAngle } from './actor-animation-v9.mjs';
 import { createConcreteMaps, weatherMetal } from './surfaces-v9.mjs';
+import { loadLocalLicensedPBR } from './cc0-materials-v10.mjs';
 import { createCinematicIndustrial, detailBudget } from './cinematic-v9.mjs';
 import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
 import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'10.0.0-blender.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'10.1.0-cc0.1',surfaceSource:'procedural-fallback',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -54,9 +55,12 @@ async function init(){
  const shadowSize=matchMedia('(pointer:coarse)').matches?1024:1536;
  moon.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(moon.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:1,far:65});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;moon.shadow.intensity=.72;scene.add(moon,moon.target);
  const warm=new THREE.DirectionalLight(0xff7633,2.2);warm.position.set(40,8,-10);scene.add(warm);
- const concrete=createConcreteMaps(renderer);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:0x617889,roughness:.86,metalness:.16}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
- const steel=weatherMetal(new THREE.MeshStandardMaterial({color:0x4a5862,metalness:.68,roughness:.5}));
+ let licensedPBR=null;
+ try{licensedPBR=await loadLocalLicensedPBR();state.surfaceSource=licensedPBR.source;}
+ catch(err){state.surfaceSource='procedural-fallback';console.warn('CC0 photogrammetry unavailable; original floor retained:',String(err));}
+ const concrete=licensedPBR?.floor||createConcreteMaps(renderer);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:licensedPBR?0xa1b2b8:0x617889,roughness:licensedPBR?.82:.86,metalness:.16}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
+ const steel=weatherMetal(new THREE.MeshStandardMaterial({...(licensedPBR?.steel||{}),color:licensedPBR?0xa9b6c0:0x4a5862,metalness:.68,roughness:.5}));
  const amber=new THREE.MeshStandardMaterial({color:0xffb24e,emissive:0xff8020,emissiveIntensity:2});
  const blue=new THREE.MeshStandardMaterial({color:0x79eaff,emissive:0x16cfff,emissiveIntensity:3});
  const red=new THREE.MeshStandardMaterial({color:0xff5238,emissive:0xff210d,emissiveIntensity:3});
@@ -267,6 +271,6 @@ async function init(){
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
   renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
- state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V10 · BLENDER HD';
+ state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V10.1 · PBR INDUSTRIAL';
 }
 init().catch(failure);
