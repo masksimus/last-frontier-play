@@ -37,14 +37,14 @@ jobs:
           test -s assets/models/AEGIS_07_V11.glb
       - name: Install headless Chromium
         run: npx playwright install --with-deps chromium
-      - name: Play complete V11 desktop, touch and fallback acceptance
-        run: npm run test:browser
+      - name: Prove exported GLB is the moving 3D player in Chromium and Android emulation
+        run: node tests/v11-hero-smoke.mjs
       - name: Upload browser screenshots and test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: aegis-07-v11-3d-browser-evidence
-          path: app/browser-v9-evidence/
+          path: app/browser-v11-evidence/
           if-no-files-found: warn
       - name: Upload playable production build
         if: success()
