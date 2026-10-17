@@ -185,7 +185,7 @@ async function init(){
     if(a.pivotsHD.legR)a.pivotsHD.legR.rotation.x=-phase;
     if(a.pivotsHD.left)a.pivotsHD.left.rotation.x=-phase*.7;
     if(a.pivotsHD.right)a.pivotsHD.right.rotation.x=phase*.55;
-    if(a.pivotsHD.cannon)a.pivotsHD.cannon.position.z=motion.firing?-.07:0;
+    if(a.pivotsHD.cannon){const c=a.pivotsHD.cannon;if(c.userData.baseZ===undefined)c.userData.baseZ=c.position.z;c.position.z=c.userData.baseZ+(motion.firing?-.08:0);}
     if(a.pivotsHD.head)a.pivotsHD.head.rotation.z=Math.sin(a.age*1.5)*.035;
   }
   const dx=(x-a.lastX)/UNIT,dy=(y-a.lastY)/UNIT;
