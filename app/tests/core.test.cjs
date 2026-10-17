@@ -1,0 +1,10 @@
+const test=require('node:test');const assert=require('node:assert/strict');const C=require('../src/core.js');
+test('ten survival waves and three boss stages',()=>{assert.equal(C.TOTAL_WAVES,10);assert.deepEqual([1,2,3,4,5,6,7,8,9,10].filter(C.isBossWave),[3,6,9]);assert.ok(C.waveInfo(9).bossHp>C.waveInfo(3).bossHp)});
+test('player movement, world boundaries and cooldowns',()=>{let p=C.newPlayer();let x=p.x;C.advancePlayer(p,{x:1,y:0},.04);assert.ok(p.x>x);p.x=C.WIDTH-1;C.advancePlayer(p,{x:1,y:0},.04);assert.ok(p.x<=C.WIDTH-45);p.dashCd=3;C.advancePlayer(p,{x:0,y:0},.05);assert.ok(p.dashCd<3)});
+test('damage and rate upgrades change weapon stats',()=>{let p=C.newPlayer();const damage=p.damage,rate=p.fireDelay;C.applyUpgrade(p,'damage');C.applyUpgrade(p,'rate');assert.ok(p.damage>damage);assert.ok(p.fireDelay<rate)});
+test('extra projectile and piercing capped',()=>{let p=C.newPlayer();for(let i=0;i<9;i++){C.applyUpgrade(p,'multishot');C.applyUpgrade(p,'pierce')}assert.equal(p.shots,5);assert.equal(p.pierce,4)});
+test('armor upgrades heal and expand maxHP',()=>{let p=C.newPlayer();p.hp=25;C.applyUpgrade(p,'maxhp');assert.equal(p.maxhp,135);assert.equal(p.hp,80)});
+test('bullets damage one target only once and allow piercing',()=>{let enemy={id:1,x:12,y:10,r:10,hp:40};let bullet={x:10,y:10,r:4,damage:15,pierce:1};assert.equal(C.bulletHit(bullet,enemy),true);assert.equal(C.bulletHit(bullet,enemy),false);assert.equal(enemy.hp,25);assert.equal(bullet.pierce,0)});
+test('spawn weights produce variety as waves advance',()=>{assert.equal(C.chooseMob(1,()=>.05),'drone');assert.equal(C.chooseMob(8,()=>.1),'brute');assert.equal(C.chooseMob(8,()=>.5),'runner')});
+test('vector normalization, collision and input safety',()=>{assert.deepEqual(C.norm(0,0),{x:0,y:0});assert.ok(Math.abs(C.norm(3,4).x-.6)<1e-8);assert.equal(C.collision({x:0,y:0,r:1},{x:3,y:0,r:1}),false)});
+test('three distinct upgrade options',()=>{const options=C.sampleUpgrades(()=>.4);assert.equal(options.length,3);assert.equal(new Set(options.map(a=>a.id)).size,3)});

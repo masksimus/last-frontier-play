@@ -1,0 +1,1 @@
+# Prebuilt sprite atlases are produced deterministically in CI by tools/build_actor_atlases.py.

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220"><defs>
+ <linearGradient id="metal" x1=".1" y1=".1" x2=".92" y2="1"><stop stop-color="#9cb5b9"/><stop offset=".18" stop-color="#536e7a"/><stop offset=".5" stop-color="#273d4b"/><stop offset=".84" stop-color="#101b29"/><stop offset="1" stop-color="#060b11"/></linearGradient>
+ <linearGradient id="ceramic" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#afc6cc"/><stop offset=".26" stop-color="#5a8796"/><stop offset=".51" stop-color="#2c4b60"/><stop offset="1" stop-color="#101b2a"/></linearGradient>
+ <linearGradient id="copper" x1=".05" x2=".95" y1="0" y2="1"><stop stop-color="#ffc98a"/><stop offset=".3" stop-color="#ba613a"/><stop offset=".7" stop-color="#5e2929"/><stop offset="1" stop-color="#231724"/></linearGradient>
+ <radialGradient id="eye"><stop stop-color="#fffec4"/><stop offset=".3" stop-color="#ff792c"/><stop offset=".76" stop-color="#de2a1d"/><stop offset="1" stop-color="#4e111b"/></radialGradient>
+ <radialGradient id="cyan"><stop stop-color="#d6fff9"/><stop offset=".23" stop-color="#61f7e8"/><stop offset=".7" stop-color="#20b8dd"/><stop offset="1" stop-color="#007d97"/></radialGradient>
+ <filter id="shadow" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="4"/></filter>
+ </defs><ellipse cx="111" cy="142" rx="79" ry="60" fill="#000" opacity=".6" filter="url(#shadow)"/>
+  <path d="M57 133 27 171 44 200 84 191 96 154ZM157 132l34 39-19 32-39-12-10-37Z" fill="url(#metal)" stroke="#a78975" stroke-width="5"/>
+  <path d="M60 48 37 57 12 95 28 136 70 145 88 107 M160 48l31 9 19 38-21 43-42 8-19-39" fill="url(#copper)" stroke="#eea683" stroke-width="5"/>
+  <path d="m58 61 33-22 52 0 27 22 10 65-34 47-73 0-34-47Z" fill="url(#metal)" stroke="#9aafb4" stroke-width="5"/>
+  <path d="m81 66 56 0 25 30-13 47-78 0-17-47Z" fill="url(#copper)" stroke="#f0ae82" stroke-width="3"/>
+  <path d="m83 88 54 0 17 18-18 20-53 0-16-19Z" fill="#111b26" stroke="#e7977a" stroke-width="3"/><path d="m80 103 23-10-4 24-24-6Z m39-10 20 9-3 15-18-3Z" fill="url(#eye)"/>
+  <path d="m80 153 15 13 37 0 11-13" fill="none" stroke="#f3c493" stroke-width="3"/>
+  <path d="M28 78 55 84 M174 82l25-2" stroke="#fa6744" stroke-width="8" opacity=".6"/></svg>

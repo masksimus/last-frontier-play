@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220"><defs>
+ <linearGradient id="metal" x1=".1" y1=".1" x2=".92" y2="1"><stop stop-color="#9cb5b9"/><stop offset=".18" stop-color="#536e7a"/><stop offset=".5" stop-color="#273d4b"/><stop offset=".84" stop-color="#101b29"/><stop offset="1" stop-color="#060b11"/></linearGradient>
+ <linearGradient id="ceramic" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#afc6cc"/><stop offset=".26" stop-color="#5a8796"/><stop offset=".51" stop-color="#2c4b60"/><stop offset="1" stop-color="#101b2a"/></linearGradient>
+ <linearGradient id="copper" x1=".05" x2=".95" y1="0" y2="1"><stop stop-color="#ffc98a"/><stop offset=".3" stop-color="#ba613a"/><stop offset=".7" stop-color="#5e2929"/><stop offset="1" stop-color="#231724"/></linearGradient>
+ <radialGradient id="eye"><stop stop-color="#fffec4"/><stop offset=".3" stop-color="#ff792c"/><stop offset=".76" stop-color="#de2a1d"/><stop offset="1" stop-color="#4e111b"/></radialGradient>
+ <radialGradient id="cyan"><stop stop-color="#d6fff9"/><stop offset=".23" stop-color="#61f7e8"/><stop offset=".7" stop-color="#20b8dd"/><stop offset="1" stop-color="#007d97"/></radialGradient>
+ <filter id="shadow" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="4"/></filter>
+ </defs><ellipse cx="110" cy="144" rx="65" ry="50" fill="#000" opacity=".5" filter="url(#shadow)"/>
+  <path d="M65 103 27 78 14 113 43 145 72 131 M157 104l37-27 12 35-27 33-29-15" fill="url(#metal)" stroke="#ac968d" stroke-width="5"/>
+  <path d="M60 57 40 87 52 141 78 168 147 168 171 140 183 91 151 56Z" fill="url(#copper)" stroke="#dba58f" stroke-width="5"/>
+  <path d="m72 60 75 0 22 29-22 53-75 0-20-54Z" fill="url(#metal)" stroke="#96a2a3" stroke-width="3"/>
+  <path d="M78 86 143 86 156 109 139 131 82 132 64 109Z" fill="#08131d" stroke="#b77b65" stroke-width="3"/>
+  <path d="m76 102 25-11-2 22-24 7Z m45-10 25 10 0 18-27-8Z" fill="url(#eye)"/><path d="m99 117h21l-11 16Z" fill="#ec8758"/>
+  <path d="m66 145-20 44 21 9 25-34 M154 146l25 42-21 10-26-34" fill="url(#metal)" stroke="#ad9a90" stroke-width="4"/>
+  <path d="m80 53 12-22 36 0 11 22" fill="url(#metal)" stroke="#d2a18e" stroke-width="3"/></svg>

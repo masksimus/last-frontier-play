@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220"><defs>
+ <linearGradient id="metal" x1=".1" y1=".1" x2=".92" y2="1"><stop stop-color="#9cb5b9"/><stop offset=".18" stop-color="#536e7a"/><stop offset=".5" stop-color="#273d4b"/><stop offset=".84" stop-color="#101b29"/><stop offset="1" stop-color="#060b11"/></linearGradient>
+ <linearGradient id="ceramic" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#afc6cc"/><stop offset=".26" stop-color="#5a8796"/><stop offset=".51" stop-color="#2c4b60"/><stop offset="1" stop-color="#101b2a"/></linearGradient>
+ <linearGradient id="copper" x1=".05" x2=".95" y1="0" y2="1"><stop stop-color="#ffc98a"/><stop offset=".3" stop-color="#ba613a"/><stop offset=".7" stop-color="#5e2929"/><stop offset="1" stop-color="#231724"/></linearGradient>
+ <radialGradient id="eye"><stop stop-color="#fffec4"/><stop offset=".3" stop-color="#ff792c"/><stop offset=".76" stop-color="#de2a1d"/><stop offset="1" stop-color="#4e111b"/></radialGradient>
+ <radialGradient id="cyan"><stop stop-color="#d6fff9"/><stop offset=".23" stop-color="#61f7e8"/><stop offset=".7" stop-color="#20b8dd"/><stop offset="1" stop-color="#007d97"/></radialGradient>
+ <filter id="shadow" x="-.5" y="-.5" width="2" height="2"><feGaussianBlur stdDeviation="4"/></filter>
+ </defs><ellipse cx="110" cy="146" rx="92" ry="60" fill="#000" opacity=".65" filter="url(#shadow)"/>
+<path d="M42 141 13 171 25 211 65 214 82 166Z M173 139l35 31-18 40-41 2-13-44Z" fill="url(#metal)" stroke="#a58a80" stroke-width="5"/>
+<path d="M45 41 14 62 3 120 28 161 71 152 93 92ZM179 41l31 23 7 54-27 42-47-13-20-62Z" fill="url(#metal)" stroke="#e9a985" stroke-width="5"/>
+<path d="m19 65 34 19-13 47-23 2Z m175 0-36 19 11 47 26 2Z" fill="url(#copper)" stroke="#f5b58f" stroke-width="3"/>
+<path d="M67 27 152 27 183 55 178 156 153 191 65 191 36 152 39 56Z" fill="#1c2530" stroke="#fa9864" stroke-width="7"/>
+<path d="M63 35 154 36 174 67 164 136 147 178 74 178 51 141 46 67Z" fill="url(#metal)" stroke="#6e7780" stroke-width="4"/>
+<path d="m70 56 28-15 30 0 29 16 12 45-22 42-73 0-24-42Z" fill="url(#copper)" stroke="#d79d8a" stroke-width="4"/>
+<path d="M74 74l36-18 36 17 10 43-25 33-43 0-25-32Z" fill="#111926" stroke="#ffa16d" stroke-width="5"/>
+<path d="m76 96 30-17-4 23-28 15Z m38-18 28 17 3 21-29-14Z" fill="url(#eye)" stroke="#ffb45c" stroke-width="3"/>
+<path d="m94 117 32 0-16 19Z" fill="#ff6749"/><path d="m89 139 17 8 6-4 6 4 15-9" fill="none" stroke="#ffc087" stroke-width="4"/>
+<path d="m24 40 34-13 16 21-24 24-26-3Z m136-12 35 12 1 28-27 3-22-23Z" fill="url(#metal)" stroke="#c3a295" stroke-width="3"/>
+<g fill="#ff753c" stroke="#ffe0a8" stroke-width="2"><circle cx="29" cy="97" r="12"/><circle cx="190" cy="98" r="12"/><circle cx="111" cy="175" r="13"/></g>
+<!-- boss cannon on left arm --> <path d="M13 98 0 38 31 31 55 100Z" fill="#111a23" stroke="#e59f72" stroke-width="5"/><path d="M2 40 26 34 40 80 9 86Z" fill="url(#metal)" stroke="#778791" stroke-width="3"/><path d="m8 45 11-3 12 32-12 5Z" fill="#ff7e3d"/><path d="m16 0 19 0 3 34-34 1Z" fill="#18242c" stroke="#e0ae8e" stroke-width="4"/><circle cx="22" cy="21" r="12" fill="#fa9134"/><circle cx="22" cy="21" r="5" fill="#ffe6ad"/>
+<!-- side upper ridge --> <path d="M67 27 82 11 139 11 154 28" fill="none" stroke="#b8ac9a" stroke-width="10"/><path d="M79 22 147 22" stroke="#3e4950" stroke-width="4"/>
+<path d="m68 164 24 8 M128 173l24-9 M52 62l-9 25 M174 68l6 25" stroke="#ffcfab" stroke-width="3" opacity=".65"/></svg>

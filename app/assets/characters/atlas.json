@@ -1,0 +1,78 @@
+{
+  "version": 7,
+  "layout": "grid",
+  "columns": 5,
+  "rows": 4,
+  "frames": 20,
+  "frameSize": 256,
+  "states": {
+    "idle": [
+      0,
+      3
+    ],
+    "run": [
+      4,
+      11
+    ],
+    "attack": [
+      12,
+      15
+    ],
+    "hit": [
+      16,
+      17
+    ],
+    "death": [
+      18,
+      19
+    ]
+  },
+  "actors": {
+    "player": {
+      "file": "assets/characters/player.webp",
+      "frameSize": 256,
+      "frames": 20,
+      "columns": 5,
+      "rows": 4,
+      "bytes": 172950,
+      "source": "AI-assisted concept illustration crop, manually isolated and animated"
+    },
+    "drone": {
+      "file": "assets/characters/drone.webp",
+      "frameSize": 256,
+      "frames": 20,
+      "columns": 5,
+      "rows": 4,
+      "bytes": 222300,
+      "source": "AI-assisted 2D concept crop, background segmented, 20 deterministic cut-out poses"
+    },
+    "runner": {
+      "file": "assets/characters/runner.webp",
+      "frameSize": 256,
+      "frames": 20,
+      "columns": 5,
+      "rows": 4,
+      "bytes": 148260,
+      "source": "AI-assisted 2D concept crop, background segmented, 20 deterministic cut-out poses"
+    },
+    "brute": {
+      "file": "assets/characters/brute.webp",
+      "frameSize": 256,
+      "frames": 20,
+      "columns": 5,
+      "rows": 4,
+      "bytes": 262014,
+      "source": "AI-assisted 2D concept crop, background segmented, 20 deterministic cut-out poses"
+    },
+    "boss": {
+      "file": "assets/characters/boss.webp",
+      "frameSize": 256,
+      "frames": 20,
+      "columns": 5,
+      "rows": 4,
+      "bytes": 350024,
+      "source": "AI-assisted concept illustration crop, manually isolated and animated"
+    }
+  },
+  "sourceProvenance": "All five actors are isolated illustrations. The three ordinary enemies are segmented from a concept made for this project, with 20 cut-out transformed frames; NOT new independently drawn animations."
+}

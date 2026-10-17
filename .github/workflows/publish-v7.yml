@@ -1,0 +1,71 @@
+name: Publish Last Frontier V7
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/publish-v7.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: last-frontier-pages-production
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify actual game mechanics and visual assets
+        working-directory: app
+        run: |
+          node --check src/game.js
+          node --test tests/*.test.cjs
+      - name: Build trusted, self-contained game only
+        working-directory: app
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Check HTTPS-ready static site, third-party licenses and hashes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,hashlib
+          root=Path('app/dist')
+          assert (root/'index.html').is_file()
+          assert (root/'src/game.js').is_file()
+          assert len(list((root/'assets/characters').glob('*.webp')))>=5
+          packages=json.loads((root/'THIRD_PARTY_LICENSES/PACKAGES.json').read_text())
+          assert {x['package'] for x in packages}=={'pixi.js','howler','vite'}
+          manifest=json.loads((root/'build-manifest.json').read_text())
+          for item in manifest['files']:
+              path=root/item['path']
+              assert path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest()==item['sha256'],item['path']
+          (root/'.nojekyll').touch()
+          print('Verified game-only deployment files:',len(manifest['files']))
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
