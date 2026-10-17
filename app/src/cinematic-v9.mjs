@@ -75,6 +75,7 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
   const beamGeometry=new THREE.ConeGeometry(1,1,12,1,true);
   const fixtureGeometry=new THREE.SphereGeometry(.16,10,6);
   const lamps=[];
+  const beams=[];
   for(let i=0;i<budget.beams;i++){
     const p=BEACONS[i],color=new THREE.Color(p.color);
     const bulb=new THREE.Mesh(fixtureGeometry,new THREE.MeshBasicMaterial({color, toneMapped:false}));
@@ -92,7 +93,7 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
       blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide
     }));
     beam.position.set(p.x,2.5,p.z);beam.scale.set(1.45,4.5,1.45);
-    beam.renderOrder=1;group.add(beam);
+    beam.renderOrder=1;group.add(beam);beams.push(beam);
   }
 
   // Instanced embers near the amber fixtures, animated at a fixed, bounded cost.
@@ -109,8 +110,14 @@ export function createCinematicIndustrial(scene,{touch=false,seed=7717}={}){
       offset:random(),speed:.15+random()*.3,phase:random()*6.28};
   });
   group.add(embers);
-  let lastBucket=-1;
+  let lastBucket=-1,lastPerf=null;
   function update(time,performance=false){
+    if(lastPerf!==performance){
+      lastPerf=performance;
+      // Optional graphics are disabled before the fallback canvas is needed.
+      for(const beam of beams)beam.visible=!performance;
+      puddles.visible=!performance;
+    }
     const cadence=performance?12:24,bucket=Math.floor(time*cadence);
     if(bucket===lastBucket)return;
     lastBucket=bucket;
