@@ -9,7 +9,7 @@ from mathutils import Vector
 R=random.Random(7312)
 for o in list(bpy.data.objects):bpy.data.objects.remove(o,do_unlink=True)
 args=sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else []
-ap=argparse.ArgumentParser();ap.add_argument('--output',required=True);ap.add_argument('--textures',default='app/assets/generated/titan');ap.add_argument('--blend',default='')
+ap=argparse.ArgumentParser();ap.add_argument('--output',required=True);ap.add_argument('--textures',default='app/art-source/titan/pbr');ap.add_argument('--blend',default='')
 cfg=ap.parse_args(args)
 out=Path(cfg.output).resolve();out.parent.mkdir(parents=True,exist_ok=True)
 textures=Path(cfg.textures).resolve()
