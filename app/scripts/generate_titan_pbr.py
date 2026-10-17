@@ -53,5 +53,5 @@ def generate(folder,size=512):
     material_set('steel',folder,size,303,(58,64,73),True)
     for f in sorted(folder.glob('*')):print(f.name,f.stat().st_size)
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--output',default='assets/generated/titan');p.add_argument('--size',type=int,default=512)
+    p=argparse.ArgumentParser();p.add_argument('--output',default='art-source/titan/pbr');p.add_argument('--size',type=int,default=512)
     a=p.parse_args();generate(a.output,a.size)
