@@ -141,8 +141,19 @@ export function createAegisHero(){
  // Preserve everything needed to display the model in the Three.js renderer.
  return root;
 }
+export function bindAegisRig(root){
+ if(root?.userData?.pivots?.torso)return root.userData.pivots;
+ const look=(name)=>{const obj=root?.getObjectByName(name);if(!obj)throw Error('AEGIS-07 GLB rig missing '+name);return obj;};
+ const p={torso:look('TORSO'),head:look('HEAD'),
+  arms:[look('SHOULDER_-1'),look('SHOULDER_1')],
+  forearms:[look('ELBOW_-1'),look('ELBOW_1')],
+  legs:[look('HIP_-1'),look('HIP_1')],
+  shins:[look('KNEE_-1'),look('KNEE_1')],
+  feet:[look('ANKLE_-1'),look('ANKLE_1')]};
+ root.userData.pivots=p;return p;
+}
 export function animateAegis(root,{moving=false,firing=false,hit=false,dead=false,speed=0}={},time=0,dt=.016){
- const p=root?.userData?.pivots;if(!p)return;
+ const p=bindAegisRig(root);
  const stride=Math.min(1,Math.max(0,speed/3.5))*(moving?1:0);
  const phase=time*8.7,walk=Math.sin(phase)*stride;
  p.torso.rotation.z=Math.sin(phase)*.015*stride;
