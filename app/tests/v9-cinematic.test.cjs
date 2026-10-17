@@ -9,7 +9,7 @@ test('cinematic budgets are explicit and cheaper for coarse-pointer mobile',asyn
  const phone=detailBudget(true),pc=detailBudget(false);
  for(const key of ['debris','puddles','embers','lights','beams'])assert(phone[key]<pc[key],key);
  assert(phone.maxPixelRatio<=1&&pc.maxPixelRatio<=1.5);
- assert(phone.lights<=2&&phone.debris<=80&&phone.puddles<=25);
+ assert.equal(phone.lights,0);assert(pc.lights<=1&&phone.debris<=60&&phone.puddles<=14);
 });
 
 test('deterministic industrial detail avoids central combat lane',async()=>{
@@ -35,8 +35,8 @@ test('actual InstancedMesh geometry and PBR materials exist and dispose safely',
   assert.equal(rubble.count,fx.summary.debris);
   assert.equal(puddles.count,fx.summary.puddles);
   assert.equal(embers.count,fx.summary.embers);
-  assert(puddles.material.isMeshPhysicalMaterial);
-  assert(puddles.material.clearcoat>=.9);
+  assert(puddles.material.isMeshStandardMaterial);
+  assert(puddles.material.roughness<.3&&puddles.material.metalness>=.2);
   assert.equal(fx.summary.dynamicShadowLights,0);
   assert(fx.summary.geometryBatches<=3);
   assert.equal(fx.group.children.filter(m=>m.isPointLight).length,fx.summary.lights);
