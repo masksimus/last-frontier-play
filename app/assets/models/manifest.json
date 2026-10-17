@@ -163,5 +163,12 @@
     "downloadFolder": "https://drive.google.com/drive/folders/1JDKZ5R1EI2Ts21riOkmotulyAEUPuhOV",
     "modification": "Embedded glTF buffers/images packed losslessly into GLB",
     "sha256": "27d0e7c52298509e3bba0787f8b6aa222caa2f1cecbe7d9310a356d03ffe5599"
+  },
+  {
+    "file": "Siege_Titan_HD.glb",
+    "author": "Last Frontier original Blender production",
+    "license": "CC0-1.0",
+    "source": "app/scripts/blender_titan_v10.py",
+    "sha256": "f2ba932133e98b0876817027116c304bd51cd3bac43d3eb9e4916cba23506707"
   }
 ]

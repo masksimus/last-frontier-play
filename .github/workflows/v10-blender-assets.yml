@@ -1,0 +1,95 @@
+name: Build Blender PBR Siege Titan - source asset
+on:
+  push:
+    branches: [feat/v10-blender-real-assets-20261018]
+    paths:
+      - '.github/workflows/v10-blender-assets.yml'
+      - 'app/scripts/blender_titan_v10.py'
+      - 'app/scripts/generate_titan_pbr.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: v10-blender-source-assets
+  cancel-in-progress: true
+jobs:
+  create-game-ready-GLB:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install official Ubuntu Blender and Python texture libraries
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender python3-numpy
+          python -m pip install --disable-pip-version-check "numpy==1.26.4" "pillow==11.3.0"
+          blender --version | head -5
+          /usr/bin/python3 -c 'import numpy; print("Blender system Python NumPy:", numpy.__version__)'
+      - name: Generate original PBR color, roughness and tangent-space normal textures
+        run: python app/scripts/generate_titan_pbr.py --output app/art-source/titan/pbr --size 512
+      - name: Actually render the authored meshes with Blender and export a glTF2 binary
+        run: |
+          blender -b -t 2 --python app/scripts/blender_titan_v10.py -- \
+            --output app/assets/models/Siege_Titan_HD.glb \
+            --textures app/art-source/titan/pbr \
+            --blend app/art-source/titan/Siege_Titan_HD.blend
+      - name: Verify model PBR material maps, number of polygons and source manifest
+        run: |
+          python - <<'PY'
+          import hashlib,json,struct
+          from pathlib import Path
+          glb=Path('app/assets/models/Siege_Titan_HD.glb')
+          data=glb.read_bytes()
+          assert data[:4]==b'glTF' and struct.unpack_from('<I',data,4)[0]==2
+          length,ctype=struct.unpack_from('<II',data,12)
+          assert ctype==0x4e4f534a
+          model=json.loads(data[20:20+length])
+          assert len(model.get('materials',[]))>=6, 'Textured metallic and emissive mats missing'
+          assert len(model.get('textures',[]))>=6, 'Color/normal/roughness maps not packed'
+          assert len(model.get('meshes',[]))>=5, 'Articulated parts not exported'
+          names={n.get('name') for n in model.get('nodes',[])}
+          for node in ['ARM_L','ARM_R','LEG_L','LEG_R','CANNON_R','HEAD']:
+              assert node in names, 'Missing runtime articulation node: '+node
+          tris=sum(model['accessors'][p['indices']]['count']//3
+            for mesh in model['meshes'] for p in mesh['primitives'] if 'indices' in p)
+          print('Blender PBR game asset:',len(data),'bytes;',tris,'triangles;',
+                len(model.get('nodes',[])),'nodes;',len(model['materials']),'materials')
+          assert 8000<=tris<=110000, ('Unexpected LOD0 triangle budget',tris)
+          manifest=Path('app/assets/models/manifest.json')
+          entries=json.loads(manifest.read_text())
+          entries=[m for m in entries if m['file']!=glb.name]
+          entries.append({
+            'file':glb.name,'author':'Last Frontier original Blender production',
+            'license':'CC0-1.0','source':'app/scripts/blender_titan_v10.py',
+            'sha256':hashlib.sha256(data).hexdigest()
+          })
+          manifest.write_text(json.dumps(entries,ensure_ascii=False,indent=2)+'\n')
+          report=Path('app/art-source/titan/geometry-report.json')
+          report.write_text(json.dumps({'tris':tris,'nodes':sorted(str(x) for x in names if x),
+              'materials':[m['name'] for m in model['materials']],
+              'textureCount':len(model['textures']),'source':'Blender (open source)'},ensure_ascii=False,indent=2))
+          PY
+          python app/scripts/audit_glb_geometry.py --output /tmp/v10-glb-audit.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Siege-Titan-HD-original-blender-and-game-glb
+          path: |
+            app/assets/models/Siege_Titan_HD.glb
+            app/art-source/titan/
+          retention-days: 30
+      - name: Commit Blender geometry and original PBR texture source to development branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/assets/models/Siege_Titan_HD.glb app/assets/models/manifest.json app/art-source/titan
+          if git diff --cached --quiet; then
+            echo "Model unchanged; no commit"
+          else
+            git commit -m "assets(v10): reproducible original Blender Siege Titan HD GLB and PBR maps [skip ci]"
+            git push origin HEAD:feat/v10-blender-real-assets-20261018
+          fi
