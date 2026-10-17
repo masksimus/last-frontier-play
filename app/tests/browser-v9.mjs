@@ -25,7 +25,7 @@ try{
    if(profile.missing)await page.route('**/models/Enemy_Large.glb',r=>r.abort());
    await page.goto('http://127.0.0.1:4239/',{waitUntil:'load'});
    await page.waitForFunction(()=>!document.querySelector('#start').disabled,{timeout:45000});
-   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));result.checks.push('all GLB models and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'9.3.0-art.1');}
+   if(!profile.fallback&&!profile.missing){assert(await page.evaluate(()=>window.FrontierV9.ready));assert(await page.evaluate(()=>window.FrontierV9.status().highDetailTitan),'Blender HD GLB not loaded');result.checks.push('original Blender textured 3D boss model and Rapier initialized');assert.equal(await page.evaluate(()=>window.FrontierV9.status().build),'10.0.0-blender.1');}
    await page.locator('#start').click();
    assert.equal(await page.evaluate(()=>window.__FRONTIER_QA__.get().mode),'running');
    await page.locator('#weaponSwitch').dispatchEvent('pointerdown',{pointerId:91,pointerType:'touch'});
