@@ -22,6 +22,7 @@ try {
    assert(state.aegisMeshCount>=75,'Must render actual 3D mesh nodes');
    assert.equal(state.renderer,'three-webgl');
    assert(state.physics,'Rapier physics must initialize');
+   await page.screenshot({path:out+'/'+p.name+'-hero-menu.png',timeout:30000});
    await page.locator('#start').click();
    await page.waitForFunction(()=>window.__FRONTIER_QA__.get().mode==='running');
    await page.waitForTimeout(800);
