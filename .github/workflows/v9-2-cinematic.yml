@@ -1,0 +1,52 @@
+name: Last Frontier V9.2 - Industrial Cinematic Acceptance
+on:
+  push:
+    branches: [feat/v9-2-cinematic-industrial-20261017]
+    paths: ['app/**', '.github/workflows/v9-2-cinematic.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontier-v9-2-cinematic
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pinned V9.1 dependencies
+        working-directory: app
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Audit all licensed GLB polygon and animation assets
+        working-directory: app
+        run: python3 scripts/audit_glb_geometry.py --output glb-triangle-report.json
+      - name: Run combat, Three.js cinematic and Rapier tests, then assemble ZIP
+        working-directory: app
+        run: npm run verify
+      - name: Install Chromium for actual gameplay and rendering
+        working-directory: app
+        run: npx playwright install --with-deps chromium
+      - name: Full V9 6-profile regression including GPU fallback and mobile
+        working-directory: app
+        run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-frontier-v9-2-cinematic-evidence
+          path: |
+            app/glb-triangle-report.json
+            app/browser-v9-evidence/
+            app/last-frontier-v9.1-rc1-yandex.zip
+          retention-days: 14
+          if-no-files-found: warn
