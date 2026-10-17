@@ -1,0 +1,54 @@
+name: V11 AEGIS 3D hero acceptance
+on:
+  push:
+    branches: [feat/v11-aegis-real-3d-hero-20261018]
+  pull_request:
+    paths:
+      - 'app/src/aegis-hero-3d.mjs'
+      - 'app/src/three-layer.mjs'
+      - 'app/tests/v11-aegis-3d.test.cjs'
+      - 'app/tests/browser-v9.mjs'
+      - '.github/workflows/v11-aegis-3d.yml'
+permissions:
+  contents: read
+jobs:
+  verify-three:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install exact Node dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify geometry, game rules and distributable
+        run: npm run verify
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Play complete V11 desktop, touch and fallback acceptance
+        run: npm run test:browser
+      - name: Upload browser screenshots and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-07-v11-3d-browser-evidence
+          path: app/browser-v9-evidence/
+          if-no-files-found: warn
+      - name: Upload playable production build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-frontier-v11-aegis-3d-playable
+          path: |
+            app/dist/
+            app/last-frontier-v9.1-rc1-yandex.zip
+          if-no-files-found: error
