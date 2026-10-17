@@ -40,6 +40,6 @@ jobs:
         with:
           name: last-frontier-v9-html5-and-evidence
           path: |
-            app/last-frontier-v9-yandex.zip
+            app/last-frontier-v9.1-rc1-yandex.zip
             app/browser-v9-evidence/
           retention-days: 30

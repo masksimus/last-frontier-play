@@ -1,6 +1,6 @@
 {
   "name": "last-frontier-v9",
-  "version": "9.0.0",
+  "version": "9.1.0-rc.1",
   "private": true,
   "scripts": {
     "build": "vite build && python3 scripts/package_dist.py",

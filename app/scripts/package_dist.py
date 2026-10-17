@@ -15,6 +15,7 @@ DIST = ROOT / 'dist'
 assert (DIST / 'index.html').is_file(), 'Vite output missing index.html'
 copytree(ROOT / 'assets', DIST / 'assets', dirs_exist_ok=True)
 copy2(ROOT / 'THIRD_PARTY_NOTICES.md', DIST / 'THIRD_PARTY_NOTICES.md')
+copy2(ROOT / 'RELEASE_NOTES_RU.md', DIST / 'RELEASE_NOTES_RU.md')
 (DIST / 'src').mkdir(exist_ok=True)
 for name in ('core.js', 'animation.js', 'combat-v8.js', 'game.js'):
     copy2(ROOT / 'src' / name, DIST / 'src' / name)
@@ -47,9 +48,10 @@ records = [{'path': path.relative_to(DIST).as_posix(),
             'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
             'bytes': path.stat().st_size} for path in files]
 (DIST / 'build-manifest.json').write_text(
-    json.dumps({'files': records}, indent=2, ensure_ascii=False), encoding='utf-8')
+    json.dumps({'version': json.loads((ROOT / 'package.json').read_text())['version'],
+                'files': records}, indent=2, ensure_ascii=False), encoding='utf-8')
 
-output = ROOT / 'last-frontier-v9-yandex.zip'
+output = ROOT / 'last-frontier-v9.1-rc1-yandex.zip'
 with ZipFile(output, 'w', ZIP_DEFLATED, compresslevel=7) as archive:
     for file in sorted(path for path in DIST.rglob('*') if path.is_file()):
         archive.write(file, file.relative_to(DIST).as_posix())
@@ -57,7 +59,7 @@ with ZipFile(output) as archive:
     names = set(archive.namelist())
     required = {'index.html', 'src/game.js', 'build-manifest.json', 'THIRD_PARTY_LICENSES/PACKAGES.json'}
     assert required.issubset(names), required - names
-    assert any(n.startswith('assets/index-') and n.endswith('.js') for n in names), 'No bundled PixiJS entrypoint'
+    assert any(n.startswith('assets/index-') and n.endswith('.js') for n in names), 'No bundled Three.js entrypoint'
     assert not any(n.startswith('/') or '..' in Path(n).parts for n in names)
     assert not any(n.lower().endswith('.map') for n in names), 'Unexpected source map'
     assert all(hashlib.sha256(archive.read(item['path'])).hexdigest() == item['sha256'] for item in records)
