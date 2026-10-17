@@ -1,0 +1,56 @@
+name: Bundle Poly Haven CC0 PBR Concrete + Metal
+on:
+  push:
+    branches: [feat/v10-1-cc0-surface-materials-20261018]
+    paths: ['app/scripts/fetch_cc0_pbr.py','.github/workflows/v10-1-cc0-assets.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  provenance-and-textures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image toolkit
+        run: python -m pip install --disable-pip-version-check "pillow==11.3.0"
+      - name: Obtain real-world CC0 materials and verify upstream checksums
+        run: python app/scripts/fetch_cc0_pbr.py
+      - name: Audit authors, licenses and relative local image assets
+        run: |
+          python - <<'PY'
+          import json,hashlib
+          from pathlib import Path
+          base=Path('app/assets/pbr')
+          manifest=json.loads((base/'provenance.json').read_text())
+          assert manifest['license']=='CC0-1.0'
+          assert len(manifest['assets'])==2
+          for a in manifest['assets']:
+              assert a['license']=='CC0-1.0'
+              assert set(a['maps'])=={'albedo','roughness','normal'}
+              for m in a['maps'].values():
+                  p=base/m['file'];assert p.is_file() and p.stat().st_size==m['bytes']
+                  assert hashlib.sha256(p.read_bytes()).hexdigest()==m['sha256']
+          print('CC0 PBR verified')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Poly-Haven-CC0-Floor-Metal-PBR-Maps
+          path: app/assets/pbr/
+          retention-days: 21
+      - name: Commit only verified CC0 textures + provenance to isolated dev branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/assets/pbr
+          if git diff --cached --quiet; then
+            echo "Assets unchanged"
+          else
+            git commit -m "assets(v10.1): bundle 1K CC0 Poly Haven photogrammetry PBR maps [skip ci]"
+            git push origin HEAD:feat/v10-1-cc0-surface-materials-20261018
+          fi
