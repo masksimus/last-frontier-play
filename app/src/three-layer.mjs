@@ -231,7 +231,16 @@ async function init(){
   if(mode==='running'&&state.frameMs>38)slowFrames++;else slowFrames=Math.max(0,slowFrames-1);
   if(slowFrames>(touch?16:24)&&state.quality!=='performance'){qualityScale=.85;renderer.setPixelRatio(.85);renderer.shadowMap.enabled=false;state.quality='performance';slowFrames=0;}
   const p=game?.player||{x:1100,y:800};const target=new THREE.Vector3(p.x/UNIT,0,p.y/UNIT-1.2);
-  camera.position.copy(target).add(new THREE.Vector3(0,22,28.16));camera.lookAt(target);
+  if(!game){
+   // Hero presentation uses the SAME 3D GLB: a closer angle, no portrait image, no flat sprite.
+   target.set(p.x/UNIT-(innerWidth>750?2.0:0),1.13,p.y/UNIT+.10);
+   camera.position.copy(target).add(new THREE.Vector3(3.4,3.0,6.1));
+   camera.zoom=innerWidth>750?1.95:2.55;
+  }else{
+   camera.position.copy(target).add(new THREE.Vector3(0,22,28.16));
+   camera.zoom=1;
+  }
+  camera.updateProjectionMatrix();camera.lookAt(target);
   // Quantize the shadow projection to texels to avoid crawling on slow movement.
   const texel=28/shadowSize, shadowX=Math.round(target.x/texel)*texel,shadowZ=Math.round(target.z/texel)*texel;
   moon.position.set(shadowX-8,23,shadowZ-10);moon.target.position.set(shadowX,0,shadowZ);moon.target.updateMatrixWorld();
