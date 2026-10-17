@@ -1,0 +1,100 @@
+name: Publish isolated V9.2 preview without changing V8/V9
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/v9-2-preview.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: last-frontier-pages-production
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 31f6aba556925f9f796b8096e67dfe1ccde9d246
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build accepted V9.2 LOD game
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run verify
+          test -f dist/index.html
+          test -f dist/src/actor-lod-v9.mjs
+      - name: Preserve V8 and V9.1 byte-for-byte while adding separate V9.2 URL
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures,hashlib,json,shutil,time,urllib.request,zipfile
+          from pathlib import Path
+          from urllib.parse import quote
+          base='https://masksimus.github.io/last-frontier-play/'
+          expected={
+            '': 'da2777fe9607667fe58e7dce50912bac3be2535ef08f232ffcb661eb092048d9',
+            'v9/': 'ac35b84f5be3cbd016fc861dc9805c9118975f86f21ffb05e5867374b4a950fe'
+          }
+          def get(url):
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(url,timeout=45) as response:return response.read()
+                  except Exception:
+                      if attempt==3:raise
+                      time.sleep(1.25*(attempt+1))
+          output=Path('pages-v9-2');output.mkdir(exist_ok=True)
+          for prefix,expected_sha in expected.items():
+              raw=get(base+prefix+'build-manifest.json')
+              assert hashlib.sha256(raw).hexdigest()==expected_sha, 'Stable manifest changed; refusing overwrite: '+prefix
+              manifest=json.loads(raw)
+              def preserve(item):
+                  name=item['path'];rel=Path(name)
+                  assert not rel.is_absolute() and '..' not in rel.parts and not name.startswith('v9')
+                  payload=get(base+prefix+quote(name))
+                  assert len(payload)==item['bytes'] and hashlib.sha256(payload).hexdigest()==item['sha256'],name
+                  dest=output/prefix/rel;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(payload)
+              with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:list(pool.map(preserve,manifest['files']))
+              target=output/prefix/'build-manifest.json'
+              target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+              print('Preserved',prefix or 'V8',len(manifest['files']),'verified files')
+          previous=get(base+'v9/last-frontier-v9.1-rc1-yandex.zip')
+          oldzip=output/'v9/last-frontier-v9.1-rc1-yandex.zip';oldzip.write_bytes(previous)
+          with zipfile.ZipFile(oldzip) as archive:
+              assert archive.testzip() is None
+              manifest=json.loads(archive.read('build-manifest.json'))
+              for item in manifest['files']:
+                  assert hashlib.sha256(archive.read(item['path'])).hexdigest()==item['sha256']
+          shutil.copytree('app/dist',output/'v9-2')
+          shutil.copy2('app/last-frontier-v9.1-rc1-yandex.zip',output/'v9-2/last-frontier-v9-2-experimental-yandex.zip')
+          (output/'.nojekyll').touch()
+          for sub in ['index.html','v9/index.html','v9-2/index.html']:
+              assert (output/sub).is_file(),sub
+          for prefix,sha in expected.items():
+              assert hashlib.sha256((output/prefix/'build-manifest.json').read_bytes()).hexdigest()==sha
+          print('V9.2 test only /v9-2/, V8 and V9 unchanged')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-v9-2
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: \${{ steps.publish.outputs.page_url }}v9-2/
+    steps:
+      - id: publish
+        uses: actions/deploy-pages@v4
