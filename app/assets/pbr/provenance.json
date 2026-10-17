@@ -1,0 +1,87 @@
+{
+  "license": "CC0-1.0",
+  "builtBy": "app/scripts/fetch_cc0_pbr.py",
+  "credit": "Powered by Poly Haven — https://polyhaven.com/",
+  "assets": [
+    {
+      "asset": "damaged_concrete_floor",
+      "source": "https://polyhaven.com/a/damaged_concrete_floor",
+      "license": "CC0-1.0",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "maps": {
+        "albedo": {
+          "file": "damaged_concrete_floor/color.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/damaged_concrete_floor/damaged_concrete_floor_diff_1k.jpg",
+          "sha256": "50d9a6746fdc9fb7c0b82c69e893292f5c0958d33a56165824db31a478341a9a",
+          "bytes": 153658,
+          "resolution": [
+            1024,
+            1024
+          ]
+        },
+        "normal": {
+          "file": "damaged_concrete_floor/normal.png",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/damaged_concrete_floor/damaged_concrete_floor_nor_gl_1k.png",
+          "sha256": "9d93df94d852918721f770bc8c0d29ebb36cadb98a10e37f9c9bc0d37ed07028",
+          "bytes": 1333524,
+          "resolution": [
+            1024,
+            1024
+          ]
+        },
+        "roughness": {
+          "file": "damaged_concrete_floor/roughness.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/damaged_concrete_floor/damaged_concrete_floor_rough_1k.jpg",
+          "sha256": "03bd6b5d14097bb2ef0ae927c4ed559104d17d3747655019cb9ada42dab14881",
+          "bytes": 183773,
+          "resolution": [
+            1024,
+            1024
+          ]
+        }
+      }
+    },
+    {
+      "asset": "metal_plate_02",
+      "source": "https://polyhaven.com/a/metal_plate_02",
+      "license": "CC0-1.0",
+      "authors": {
+        "Rob Tuytel": "All"
+      },
+      "maps": {
+        "albedo": {
+          "file": "metal_plate_02/color.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate_02/metal_plate_02_diff_1k.jpg",
+          "sha256": "51acf8bea3d108514d41e6511ecba0f22876a20f8677c63dc8f38263a3be800e",
+          "bytes": 167635,
+          "resolution": [
+            1024,
+            1024
+          ]
+        },
+        "normal": {
+          "file": "metal_plate_02/normal.png",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/png/1k/metal_plate_02/metal_plate_02_nor_gl_1k.png",
+          "sha256": "9f77705e1b4535eacd5b89307499d2c4dc10beabf809df6e08624349ba17e3e8",
+          "bytes": 371509,
+          "resolution": [
+            1024,
+            1024
+          ]
+        },
+        "roughness": {
+          "file": "metal_plate_02/roughness.jpg",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/metal_plate_02/metal_plate_02_rough_1k.jpg",
+          "sha256": "c73116904e940d0e446b4215616b2280135cefb5fd92cadab21b2ab04605e861",
+          "bytes": 388478,
+          "resolution": [
+            1024,
+            1024
+          ]
+        }
+      }
+    }
+  ]
+}
