@@ -42,6 +42,6 @@ test('the runtime actually instantiates new art in the 3D scene, not a static im
  assert(text.includes('createTitanArmor(root)'));
  assert(text.includes('createIndustrialLandmarks(scene)'));
  assert(text.includes('landmarks.update(t)'));
- assert(text.includes("V9.3 · АРТ-ОБНОВЛЕНИЕ"));
- assert(text.includes("build:'9.3.0-art.1'"));
+ assert(text.includes("V10 · BLENDER HD"));
+ assert(text.includes("build:'10.0.0-blender.1'"));
 });
