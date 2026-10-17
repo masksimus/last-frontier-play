@@ -38,22 +38,22 @@ async function init(){
  document.querySelector('#stage').after(renderer.domElement);
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,detailBudget(touch).maxPixelRatio));
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
- scene=new THREE.Scene();scene.background=new THREE.Color(0x0c1620);scene.fog=new THREE.FogExp2(0x182535,.014);
- const pmrem=new THREE.PMREMGenerator(renderer);const environment=new RoomEnvironment();scene.environment=pmrem.fromScene(environment,.05).texture;scene.environmentIntensity=.85;environment.dispose();pmrem.dispose();
+ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x080e18);scene.fog=new THREE.FogExp2(0x142033,.018);
+ const pmrem=new THREE.PMREMGenerator(renderer);const environment=new RoomEnvironment();scene.environment=pmrem.fromScene(environment,.05).texture;scene.environmentIntensity=.63;environment.dispose();pmrem.dispose();
  camera=new THREE.OrthographicCamera(-12,12,7,-7,.1,100);
  const loader=new GLTFLoader();
  const files=[...new Set([...PROPS.filter(p=>!p.procedural).map(p=>p.model),...Object.values(actorModels),'chimney_detailed','hangar_smallA','pipe_straight','pipe_cornerRound','rail','supports_high','turret_double','weapon_rifle','weapon_gun','craft_speederA','rock_crystals'])];
  const models=Object.fromEntries(await Promise.all(files.map(async name=>[name,await loader.loadAsync(`assets/models/${name}.glb`)])));
  state.models=files.length;state.animationClips=Object.fromEntries(Object.entries(actorModels).map(([kind,name])=>[kind,models[name].animations.map(a=>a.name)]));
  physics=await (await import('./physics-v9.mjs')).createPhysics();bridge.enemyDirection=createNavigation();bridge.wallHit=(a,b)=>physics?.wallHit(a,b);bridge.move=(entity,previous)=>physics?.move(entity,previous);
- const hemi=new THREE.HemisphereLight(0xb5cee2,0x3d3330,1.65);scene.add(hemi);
- const moon=new THREE.DirectionalLight(0xc6deed,3.5);moon.position.set(8,23,7);moon.castShadow=true;
+ const hemi=new THREE.HemisphereLight(0x7caccd,0x1c1113,1.02);scene.add(hemi);
+ const moon=new THREE.DirectionalLight(0x89bfe8,2.25);moon.position.set(8,23,7);moon.castShadow=true;
  const shadowSize=matchMedia('(pointer:coarse)').matches?1024:1536;
  moon.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(moon.shadow.camera,{left:-14,right:14,top:14,bottom:-14,near:1,far:65});moon.shadow.bias=-.00025;moon.shadow.normalBias=.025;moon.shadow.intensity=.72;scene.add(moon,moon.target);
- const warm=new THREE.DirectionalLight(0xff843c,1.7);warm.position.set(40,8,-10);scene.add(warm);
+ const warm=new THREE.DirectionalLight(0xff7633,2.2);warm.position.set(40,8,-10);scene.add(warm);
  const concrete=createConcreteMaps(renderer);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:0xc4c9c9,roughness:1,metalness:.08}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,36),new THREE.MeshStandardMaterial({...concrete,normalScale:new THREE.Vector2(.2,.2),color:0x617889,roughness:.86,metalness:.16}));floor.rotation.x=-Math.PI/2;floor.position.set(22,-.025,16);floor.receiveShadow=true;scene.add(floor);
  const steel=weatherMetal(new THREE.MeshStandardMaterial({color:0x4a5862,metalness:.68,roughness:.5}));
  const amber=new THREE.MeshStandardMaterial({color:0xffb24e,emissive:0xff8020,emissiveIntensity:2});
  const blue=new THREE.MeshStandardMaterial({color:0x79eaff,emissive:0x16cfff,emissiveIntensity:3});
@@ -131,7 +131,7 @@ async function init(){
   const root=new THREE.Group();root.add(obj);scene.add(root);
   const armorV93=kind==='boss'?createTitanArmor(root):null;
   obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();o.material.metalness=kind==='player'||kind==='boss'?.42:.18;o.material.roughness=.55;
-   o.material.color.set(kind==='player'?0xc5d8e5:kind==='boss'?0xc5b4aa:0xd3b2ad);
+   o.material.color.set(kind==='player'?0x8db7d3:kind==='boss'?0x85717b:0xc27979);
   }});
   const glowMat=kind==='player'?blue:red;
   // Separate armour plates, visor and backpack customize the rig without replacing it.
