@@ -1,0 +1,104 @@
+name: Publish verified V11 AEGIS 3D alongside older versions
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/v11-pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: last-frontier-pages-production
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: bf1d9e6c924181991ec1e93a8ad856b344803d7c
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build actual 3D GLB, test game and package V11
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run verify
+          test -s dist/assets/models/AEGIS_07_V11.glb
+          test -s dist/index.html
+      - name: Chromium verifies GLB hero on desktop and touch
+        working-directory: app
+        run: |
+          npx playwright install --with-deps chromium
+          node tests/v11-hero-smoke.mjs
+      - name: Preserve deployed V8, V9, V9.2, V9.3 and V10 byte-for-byte; add V11
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures, hashlib, json, shutil, time, urllib.request, zipfile
+          from pathlib import Path
+          from urllib.parse import quote
+          base='https://masksimus.github.io/last-frontier-play/'
+          output=Path('pages-v11');output.mkdir(exist_ok=True)
+          def get(url):
+              for attempt in range(4):
+                  try:
+                      req=urllib.request.Request(url,headers={'User-Agent':'LastFrontier-VersionPreserver/11'})
+                      with urllib.request.urlopen(req,timeout=50) as response:return response.read()
+                  except Exception:
+                      if attempt==3:raise
+                      time.sleep((attempt+1)*1.5)
+          def preserve(prefix):
+              raw=get(base+prefix+'build-manifest.json')
+              manifest=json.loads(raw)
+              def preserve_file(item):
+                  name=item['path'];rel=Path(name)
+                  assert not rel.is_absolute() and '..' not in rel.parts,name
+                  payload=get(base+prefix+quote(name))
+                  assert hashlib.sha256(payload).hexdigest()==item['sha256'],name
+                  assert len(payload)==item['bytes'],name
+                  dest=output/prefix/rel;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(payload)
+              with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                  list(executor.map(preserve_file,manifest['files']))
+              manifest_dest=output/prefix/'build-manifest.json'
+              manifest_dest.parent.mkdir(parents=True,exist_ok=True);manifest_dest.write_bytes(raw)
+              print('Preserved',prefix or 'V8',len(manifest['files']),'files')
+          for prefix in ('','v9/','v9-2/','v9-3/','v10/'):preserve(prefix)
+          for extra in (
+            'v9/last-frontier-v9.1-rc1-yandex.zip',
+            'v9-2/last-frontier-v9-2-experimental-yandex.zip',
+            'v9-3/last-frontier-v9-3-art-preview-yandex.zip',
+            'v10/last-frontier-v10-blender-hd-yandex.zip'):
+              dest=output/extra;dest.parent.mkdir(parents=True,exist_ok=True)
+              dest.write_bytes(get(base+extra))
+              with zipfile.ZipFile(dest) as archive: assert archive.testzip() is None
+          shutil.copytree('app/dist',output/'v11')
+          shutil.copy2('app/last-frontier-v9.1-rc1-yandex.zip',output/'v11/last-frontier-v11-aegis3d-yandex.zip')
+          (output/'.nojekyll').touch()
+          assert (output/'v11/assets/models/AEGIS_07_V11.glb').stat().st_size>100000
+          for p in ('index.html','v9/index.html','v9-2/index.html','v9-3/index.html','v10/index.html','v11/index.html'):
+              assert (output/p).is_file(),p
+          print('Ready: /v11/ with all older deployments preserved')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-v11
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}v11/
+    steps:
+      - id: publish
+        uses: actions/deploy-pages@v4
