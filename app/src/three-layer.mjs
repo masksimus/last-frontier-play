@@ -14,7 +14,7 @@ import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.m
 import { createAegisHero, animateAegis } from './aegis-hero-3d.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'11.0.0-aegis-real-3d',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={aegisGLB:false,cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'11.0.0-aegis-real-3d',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -48,7 +48,8 @@ async function init(){
  const models=Object.fromEntries(await Promise.all(files.map(async name=>[name,await loader.loadAsync(`assets/models/${name}.glb`)])));
   // Real offline Blender-authored GLB: optional fallback retains the previously tested animated titan.
   try{models.siege_titan_hd=await loader.loadAsync('assets/models/Siege_Titan_HD.glb');state.highDetailTitan=true;}catch(err){state.highDetailTitan=false;console.warn('Blender HD titan unavailable; using old rig:',String(err));}
- state.models=files.length;state.animationClips=Object.fromEntries(Object.entries(actorModels).map(([kind,name])=>[kind,models[name].animations.map(a=>a.name)]));
+ try{models.aegis_v11=await loader.loadAsync('assets/models/AEGIS_07_V11.glb');state.aegisGLB=true;}catch(e){state.aegisGLB=false;console.warn('AEGIS GLB missing: using live mesh-construction fallback',String(e));}
+ state.models=files.length+(state.aegisGLB?1:0);state.animationClips=Object.fromEntries(Object.entries(actorModels).map(([kind,name])=>[kind,models[name].animations.map(a=>a.name)]));
  physics=await (await import('./physics-v9.mjs')).createPhysics();bridge.enemyDirection=createNavigation();bridge.wallHit=(a,b)=>physics?.wallHit(a,b);bridge.move=(entity,previous)=>physics?.move(entity,previous);
  const hemi=new THREE.HemisphereLight(0x7caccd,0x1c1113,1.02);scene.add(hemi);
  const moon=new THREE.DirectionalLight(0x89bfe8,2.25);moon.position.set(8,23,7);moon.castShadow=true;
@@ -133,7 +134,7 @@ async function init(){
   obj.scale.setScalar(heights[kind]/height);obj.position.y=-bounds.min.y*obj.scale.y;
   const root=new THREE.Group();root.add(obj);scene.add(root);
   // AEGIS replaces the rendered astronaut with actual meshes; existing mixer remains inert behind it.
-  const aegis=kind==='player'?createAegisHero():null;
+  const aegis=kind==='player'?(models.aegis_v11?(models.aegis_v11.scene.getObjectByName('AEGIS_07_REAL_3D')||models.aegis_v11.scene).clone(true):createAegisHero()):null;
   if(aegis){obj.visible=false;root.add(aegis);state.aegisHero=true;let total=0;aegis.traverse(o=>{if(o.isMesh){total++;if(!o.geometry?.isBufferGeometry)throw Error('AEGIS must be real mesh geometry');}});state.aegisMeshCount=total;}
   const armorV93=kind==='boss'?createTitanArmor(root):null;
   let titanHD=null,pivotsHD=null;
