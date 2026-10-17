@@ -10,9 +10,10 @@ import { createActorAnimation, dampAngle } from './actor-animation-v9.mjs';
 import { createConcreteMaps, weatherMetal } from './surfaces-v9.mjs';
 import { createCinematicIndustrial, detailBudget } from './cinematic-v9.mjs';
 import { createActorLOD, selectDetailedActors } from './actor-lod-v9.mjs';
+import { createTitanArmor, createIndustrialLandmarks } from './visible-art-v93.mjs';
 
 const actorModels={player:'Astronaut_FinnTheFrog',drone:'Enemy_Flying',runner:'Enemy_Small',brute:'Enemy_Large',boss:'Mech_FinnTheFrog'};
-const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.1.0-rc.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
+const state={cinematic:null,lodActors:0,detailedActors:0,ready:false,renderer:'canvas-fallback',reason:'',models:0,actors:0,drawCalls:0,triangles:0,frameMs:0,quality:'balanced',build:'9.3.0-art.1',shadowCasters:0,contactShadows:0,animationClips:[],contextLost:false};
 const bridge={ready:false,status:()=>({...state,physics:physics?.status()}),screenInput,draw(){},move(){}};
 window.FrontierV9=bridge;
 let physics,renderer,scene,camera,disposed=false;
@@ -111,7 +112,9 @@ async function init(){
  // Keep instance geometry separate from static GLTF merge passes.
  const cinematic=createCinematicIndustrial(scene,{touch});
  const actorLOD=createActorLOD(scene);
+ const landmarks=createIndustrialLandmarks(scene);
  state.cinematic=cinematic.summary;
+ state.visibleArt={landmarks:landmarks.summary.landmarks,reactorRings:landmarks.summary.rings,materialBatches:landmarks.summary.materialBatches};
  // Ground-projected lighting cards are independent effects, never background art.
  const glowCanvas=document.createElement('canvas');glowCanvas.width=glowCanvas.height=64;const gc=glowCanvas.getContext('2d'),gradient=gc.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'#ffffff');gradient.addColorStop(.22,'#ffffff88');gradient.addColorStop(1,'#ffffff00');gc.fillStyle=gradient;gc.fillRect(0,0,64,64);
  const glowTex=new THREE.CanvasTexture(glowCanvas);
@@ -126,6 +129,7 @@ async function init(){
   const obj=clone(models[actorModels[kind]].scene);const bounds=new THREE.Box3().setFromObject(obj),height=bounds.max.y-bounds.min.y;
   obj.scale.setScalar(heights[kind]/height);obj.position.y=-bounds.min.y*obj.scale.y;
   const root=new THREE.Group();root.add(obj);scene.add(root);
+  const armorV93=kind==='boss'?createTitanArmor(root):null;
   obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.frustumCulled=false;o.material=o.material.clone();o.material.metalness=kind==='player'||kind==='boss'?.42:.18;o.material.roughness=.55;
    o.material.color.set(kind==='player'?0xc5d8e5:kind==='boss'?0xc5b4aa:0xd3b2ad);
   }});
@@ -144,12 +148,13 @@ async function init(){
    const visor=new THREE.Mesh(new THREE.BoxGeometry(radius*1.5,radius*.25,radius*.22),kind==='player'?amber:red);visor.position.set(0,0,radius);helmet.add(visor);root.add(helmet);
   }
   const animation=createActorAnimation(mixer,actions,kind);
-  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
+  const actor={root,obj,mixer,animation,actions,kind,gun,helmet,head,armorV93,age:0,lastX:null,lastY:null,recoil:0,lastShot:0};return actor;
  }
  function actor(id,kind,x,y,angle,motion,dt){
   let a=actorMap.get(id);if(a&&a.kind!==kind){a.root.visible=false;a.animation.reset();pools[a.kind].push(a);actorMap.delete(id);a=null;}
   if(!a){a=pools[kind].pop()||makeActor(kind);actorMap.set(id,a);a.animation.reset();a.root.visible=true;a.age=0;a.lastX=x;a.lastY=y;a.lastShot=motion.shots||0;a.recoil=0;a.root.rotation.y=Math.PI/2-angle;}
   a.seen=true;a.age+=dt;
+  a.armorV93?.update(a.age,!!motion.enraged);
   const dx=(x-a.lastX)/UNIT,dy=(y-a.lastY)/UNIT;
   const speed=dt>0?Math.hypot(dx,dy)/dt:0;
   a.lastX=x;a.lastY=y;
@@ -196,13 +201,14 @@ async function init(){
   for(const a of actorMap.values())a.seen=false;
   const t=game?.time||now/1000;
   cinematic.update(t,state.quality==='performance');
+  landmarks.update(t);
   const hero=actor('player','player',p.x,p.y,facing||-.5,{moving:motion?.moving,firing:motion?.firing>0,hit:motion?.hit>0,shots:game?.visualShots||0},dt);
   const visible=[];
   if(game){for(const e of game.enemies){viewSphere.center.set(e.x/UNIT,1,e.y/UNIT);if(frustum.intersectsSphere(viewSphere))visible.push(e);}}
   const detailed=selectDetailedActors(visible,p,touch,state.quality==='performance');
   const lower=[];
   for(const e of visible){
-   if(detailed.has(e.id))actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0},dt);
+   if(detailed.has(e.id))actor(e.id,e.type,e.x,e.y,Math.atan2(p.y-e.y,p.x-e.x),{moving:true,firing:e.attackPose>0,hit:e.knock>0,enraged:e.type==='boss'&&e.hp<=e.maxhp*.5},dt);
    else lower.push(e);
   }
   state.lodActors=actorLOD.draw(lower,p);
@@ -228,6 +234,6 @@ async function init(){
   muzzleLight.intensity=motion?.firing>0?4:0;muzzleLight.position.set(p.x/UNIT+Math.cos(facing)*.8,1.2,p.y/UNIT+Math.sin(facing)*.8);
   renderer.render(scene,camera);state.actors=actorMap.size+state.lodActors;state.drawCalls=renderer.info.render.calls;state.triangles=renderer.info.render.triangles;
  };
- state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.1 · СЕКТОР A-7';
+ state.ready=bridge.ready=true;state.renderer='three-webgl';document.querySelector('#start').disabled=false;window.dispatchEvent(new Event('frontier-renderer-ready'));document.querySelector('#renderStatus').textContent='V9.3 · АРТ-ОБНОВЛЕНИЕ';
 }
 init().catch(failure);
