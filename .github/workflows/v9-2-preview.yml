@@ -34,7 +34,8 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run verify
           test -f dist/index.html
-          test -f dist/src/actor-lod-v9.mjs
+          test -f dist/build-manifest.json
+          grep -q 'EnemyGeometryLOD_' dist/assets/index-*.js
       - name: Preserve V8 and V9.1 byte-for-byte while adding separate V9.2 URL
         run: |
           python3 - <<'PY'
