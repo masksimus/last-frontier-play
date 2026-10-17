@@ -9,8 +9,8 @@ test('siege titan is a tangible 3D figure with armor plates, reactor and dual ca
    assert.equal(rig.group.name,'SiegeTitanArmoredV93');
    const meshes=[];rig.group.traverse(o=>{if(o.isMesh)meshes.push(o)});
    assert(meshes.length>=25,'boss must have substantial separate geometry');
-   assert(rig.core.geometry.isIcosahedronGeometry);
-   assert(rig.halo.geometry.isTorusGeometry);
+   assert(rig.core.geometry.type==='IcosahedronGeometry');
+   assert(rig.halo.geometry.type==='TorusGeometry');
    assert(rig.mats.some(m=>m.isMeshStandardMaterial&&m.emissiveIntensity>1));
    rig.update(2,false);const normal=rig.mats[2].emissiveIntensity;
    rig.update(2,true);assert(rig.mats[2].emissiveIntensity>normal);
