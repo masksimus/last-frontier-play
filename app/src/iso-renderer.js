@@ -8,7 +8,7 @@ const floorTexture=new Image();floorTexture.src='assets/floor.webp';
 const fx={};for(const name of ['explosion','smoke','muzzle','scorch']){const im=new Image();im.src='assets/'+name+'.png';fx[name]=im;}
 let width=innerWidth,height=innerHeight,dpr=1,zoom=1,camera={x:0,y:0},origin={x:0,y:0},lastLevel=null,time=0;
 let props=[],visible=new Set(),explored=new Set(),visibilityTimer=0,frame=0,lastState=null;
-let gpu=[];const TAU=Math.PI*2;
+let gpu=[],playerFrontPass=false;const TAU=Math.PI*2;
 function resize(){width=Math.max(300,innerWidth);height=Math.max(300,innerHeight);dpr=Math.min(2,devicePixelRatio||1);
  canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';
  zoom=Math.min(1.08,Math.max(.68,Math.min(width/1366,height/800)));}
@@ -132,6 +132,7 @@ function backdrop(){const g=ctx.createLinearGradient(0,0,0,height);g.addColorSto
 function portrait(){if(frame%30)return;const node=document.getElementById('portrait'),im=atlases.actors,m=window.SiegeArt?.sprites?.marineRight;if(!node||!im?.naturalWidth||!m)return;const c=node.getContext('2d'),[x,y,w,h]=m.rect;c.fillStyle='#0c2035';c.fillRect(0,0,node.width,node.height);c.drawImage(im,x+w*.13,y+h*.006,w*.57,h*.43,0,0,node.width,node.height);}
 function weaponCards(){if(frame%30||!atlases.weapons?.naturalWidth)return;const mapping={pistol:'weaponPistol',shotgun:'weaponShotgun',rifle:'weaponRifle',plasma:'weaponPlasma'};for(const button of document.querySelectorAll('[data-weapon]')){const meta=window.SiegeArt?.sprites?.[mapping[button.dataset.weapon]];if(!meta)continue;let c=button.querySelector('canvas');if(!c){c=document.createElement('canvas');c.width=240;c.height=100;c.setAttribute('aria-hidden','true');c.style.cssText='display:block;width:100%;height:42px;max-height:53%;object-fit:contain;pointer-events:none';const svg=button.querySelector('svg');if(svg){svg.style.display='none';svg.insertAdjacentElement('afterend',c);}else button.prepend(c);}const g=c.getContext('2d'),[x,y,w,h]=meta.rect;g.clearRect(0,0,240,100);const scale=Math.min(226/w,90/h),dw=w*scale,dh=h*scale;g.drawImage(atlases.weapons,x,y,w,h,(240-dw)/2,(100-dh)/2,dw,dh);}}
 function actorAimPoint(e){const p=screen(e),size=e.type==='queen'||e.isBoss?330:e.type==='brute'?170:120;return {x:p.x,y:p.y-size*.65*zoom};}
+function readablePlayer(state){playerFrontPass=false;const p=P(state.player.x,state.player.y),probeY=p.y-82;for(const e of state.enemies||[]){if(e.hp<=0||e.x+e.y<=state.player.x+state.player.y)continue;const q=P(e.x,e.y),size=e.type==='queen'||e.isBoss?330:e.type==='brute'?170:120;if(Math.abs(q.x-p.x)<size*.48+18&&probeY>q.y-size*.94&&probeY<q.y){playerFrontPass=true;break;}}if(playerFrontPass){const a=state.player.angle||0,right=P(Math.cos(a),Math.sin(a)).x>=0,bob=state.player.moving?Math.sin((state.player.anim||time)*13)*1.4:0;sprite(right?'marineRight':'marineLeft',p.x,p.y-bob,120,.98);}}
 const preview=World.level(0),previewEnemies=Array.from({length:12},(_,i)=>({id:i,x:7+(i%4)*.8,y:5+Math.floor(i/4)*1.05,type:i===5?'brute':'crawler',hp:100,maxHp:100,angle:2.8,anim:i}));
 previewEnemies.push({id:50,x:10.5,y:6.5,type:'queen',isBoss:true,hp:3200,maxHp:3200,angle:2.1,anim:1});
 function render(state,dt=.016){time+=dt;frame++;gpu=[];const menu=!state?.level||state.mode==='menu';
@@ -165,7 +166,7 @@ function render(state,dt=.016){time+=dt;frame++;gpu=[];const menu=!state?.level|
  for(const item of state.pickups||[])if(display(item.x,item.y))queue.push({depth:item.x+item.y-.01,draw:()=>drawPickup(item)});
  for(const e of state.enemies||[])if(display(e.x,e.y))queue.push({depth:e.x+e.y,draw:()=>entity(e.type,e,state)});
  queue.push({depth:state.player.x+state.player.y,draw:()=>entity('marine',state.player,state)});
- queue.sort((a,b)=>a.depth-b.depth);for(const item of queue)item.draw();for(const p of props)if(p.type==='barrels'&&hash(p.x,p.y)>.56&&Math.hypot(p.x-state.player.x,p.y-state.player.y)<12)drawFire(p.x,p.y,p.x,.75);drawEffects(state);ctx.restore();
+ queue.sort((a,b)=>a.depth-b.depth);for(const item of queue)item.draw();readablePlayer(state);for(const p of props)if(p.type==='barrels'&&hash(p.x,p.y)>.56&&Math.hypot(p.x-state.player.x,p.y-state.player.y)<12)drawFire(p.x,p.y,p.x,.75);drawEffects(state);ctx.restore();
  // Lamp pool and a restrained edge vignette keep distant corridors readable.
  const player=screen(state.player),vignette=ctx.createRadialGradient(player.x,player.y,100*zoom,player.x,player.y,Math.max(width,height)*.72);
  vignette.addColorStop(0,'#01030900');vignette.addColorStop(.6,'#01030905');vignette.addColorStop(1,'#02061399');ctx.fillStyle=vignette;ctx.fillRect(0,0,width,height);
@@ -174,5 +175,5 @@ function render(state,dt=.016){time+=dt;frame++;gpu=[];const menu=!state?.level|
  if(window.FrontierV6?.ready)window.FrontierV6.effects(gpu);
  if(!menu)radar(state);portrait();weaponCards();
 }
-window.OutbreakRenderer={render,screenToWorld,worldToScreen:(x,y)=>screen(typeof x==='object'?x:{x,y}),actorAimPoint,status:()=>({projection:'2:1-isometric',zoom,assetsReady:names.every(n=>art[n].complete&&art[n].naturalWidth>0)&&Object.keys(atlases).length>=2&&Object.values(atlases).every(im=>im.complete&&im.naturalWidth>0),hdAssetsReady:Object.keys(atlases).length>=2&&Object.values(atlases).every(im=>im.complete&&im.naturalWidth>0),artDirection:'industrial-siege-hd',spriteRegions:Object.keys(window.SiegeArt?.sprites||{}).length,explored:explored.size,visible:visible.size,props:props.length})};
+window.OutbreakRenderer={render,screenToWorld,worldToScreen:(x,y)=>screen(typeof x==='object'?x:{x,y}),actorAimPoint,status:()=>({projection:'2:1-isometric',zoom,assetsReady:names.every(n=>art[n].complete&&art[n].naturalWidth>0)&&Object.keys(atlases).length>=2&&Object.values(atlases).every(im=>im.complete&&im.naturalWidth>0),hdAssetsReady:Object.keys(atlases).length>=2&&Object.values(atlases).every(im=>im.complete&&im.naturalWidth>0),artDirection:'industrial-siege-hd',spriteRegions:Object.keys(window.SiegeArt?.sprites||{}).length,playerFrontPass,explored:explored.size,visible:visible.size,props:props.length})};
 })();
