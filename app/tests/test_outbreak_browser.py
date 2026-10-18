@@ -292,12 +292,12 @@ def verify_reference_battle(page, item, mobile=False):
         if(ordinary.length<8)throw Error('Final wave lacks a visible horde');
         const poses=[[5.1,5.2],[8.6,7.7],[4.1,8.3],[7.4,4.1],
                      [10.3,7.1],[5.3,9.1],[10.8,4.5],[9.3,9.1]];
-        s.player.x=6.3;s.player.y=7.3;s.player.invulnerable=1e6;
+        s.player.x=4.1;s.player.y=7.6;s.player.invulnerable=1e6;
         s.player.cooldown=0;s.player.reload=0;s.player.clip.rifle=30;
         s.player.weapon='rifle';s.player.grenades=Math.max(1,s.player.grenades);
         const actors=[boss,...ordinary];
         for(let i=0;i<actors.length;i++){
-          const e=actors[i],[x,y]=i===0?[8.8,6.4]:poses[i-1];
+          const e=actors[i],[x,y]=i===0?[10.8,6.9]:poses[i-1];
           if(!OutbreakWorld.isWalkable(s.level,x,y,e.r))throw Error('Visual fixture pose is inside a wall');
           e.x=x;e.y=y;e.cooldown=1e6;e.telegraph=1e6;e.hp=e.maxHp=Math.max(1200,e.maxHp);
           e.path=[];e.charge=0;e.angle=Math.atan2(s.player.y-y,s.player.x-x);
@@ -307,7 +307,7 @@ def verify_reference_battle(page, item, mobile=False):
         const toast=document.getElementById('toast');if(toast)toast.classList.add('hidden');
         return {bossId:boss.id,actors:actors.map(e=>({id:e.id,type:e.type,isBoss:!!e.isBoss,x:e.x,y:e.y})),
           method:'Test-only placement and increased target HP of actual final-wave actors, plus player invulnerability; real rifle and grenade input. Not an unmodified playthrough.'};}""")
-    teleport(page, 6.3, 7.3)
+    teleport(page, 4.1, 7.6)
     target = page.evaluate("""id => {const e=OutbreakDebug.getState().enemies.find(e=>e.id===id);
         return OutbreakRenderer.actorAimPoint?OutbreakRenderer.actorAimPoint(e):OutbreakRenderer.worldToScreen(e.x,e.y);}""",
         fixture["bossId"])
@@ -330,7 +330,7 @@ def verify_reference_battle(page, item, mobile=False):
         # Shorten only the fuse, then let production grenade collision/explosion
         # create the effects. No decorative background or synthetic VFX are used.
         require(page.evaluate("""() => {const g=OutbreakDebug.getState().grenades[0];
-            if(!g)return false;g.life=.04;return true;}"""), "Grenade input did not create a grenade")
+            if(!g)return false;g.life=.45;return true;}"""), "Grenade input did not create a grenade")
         page.wait_for_function("OutbreakDebug.getState().effects.some(e=>e.kind==='explosion')", timeout=1800)
         require(page.evaluate("OutbreakDebug.getState().enemies.filter(e=>e.hp>0).length") >= 9,
                 "Reference capture lost the arranged horde before the explosion")

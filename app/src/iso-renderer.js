@@ -31,9 +31,9 @@ function nearPlayer(x,y,r=14){return !lastState?.player||Math.hypot(x-lastState.
 function isVisible(x,y){return visible.has(Math.floor(x)+','+Math.floor(y));}
 function makeProps(level){const result=[];
  for(let y=0;y<level.map.length;y++)for(let x=0;x<level.map[y].length;x++){
-  if(level.map[y][x]==='#'&&level.map[y+1]?.[x]==='.'&&x%6===2){result.push({x:x+.5,y:y+.1,type:'factory',size:410});if(hash(x,y)>.55)result.push({x:x+1.5,y:y-.4,type:'tower',size:215});}
+  if(y<=4&&level.map[y][x]==='#'&&level.map[y+1]?.[x]==='.'&&x%6===2){result.push({x:x+.5,y:y+.1,type:'factory',size:410});if(hash(x,y)>.55)result.push({x:x+1.5,y:y-.4,type:'tower',size:215});}
   if(level.map[y][x]==='#'&&level.map[y-1]?.[x]==='.'&&x%5===3)result.push({x:x+.5,y:y+.6,type:'railing',size:205});
-  if(level.map[y][x]!=='.'||hash(x,y)<.77)continue;
+  if(level.map[y][x]!=='.'||hash(x,y)<.88)continue;
   const adjacent=(level.map[y-1]?.[x]==='#'||level.map[y]?.[x-1]==='#');
   if(!adjacent||[...level.terminals,...level.nests,level.spawn,level.exit,...level.supplies].some(p=>Math.hypot(p.x-x-.5,p.y-y-.5)<1.9))continue;
   const n=hash(y,x),type=n>.7?'container':n>.4?'generator':'barrels';result.push({x:x+.5,y:y+.5,type,size:type==='container'?190:type==='generator'?145:115});
@@ -159,7 +159,7 @@ function render(state,dt=.016){time+=dt;frame++;gpu=[];const menu=!state?.level|
  if(state.exitReady){glow(exit.x,exit.y-20,75,'#a6e174',.25);label(exit.x,exit.y-70,'ШЛЮЗ ОТКРЫТ','#c9eeb7');}
  for(const d of state.decals||[]){if(!display(d.x,d.y))continue;const p=P(d.x,d.y);ctx.globalAlpha=d.alpha??.65;for(let i=0;i<4;i++)diamond(p.x+Math.sin(i*3+d.x)*10,p.y+Math.cos(i*3)*5,(d.r||.3)*30+i*2,(d.r||.3)*12+i,'#643923');ctx.globalAlpha=1;}
  for(const c of state.corpses||[]){if(!display(c.x,c.y)||!isVisible(c.x,c.y))continue;const p=P(c.x,c.y);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(.25);ctx.scale(1,.35);ctx.globalAlpha=.55;sprite(c.type==='spitter'?'crawler':c.type,0,10,c.type==='queen'?130:55);ctx.restore();}
- for(const p of props){const facade=['factory','tower','railing'].includes(p.type),distance=Math.hypot(p.x-state.player.x,p.y-state.player.y);if(display(p.x,p.y)&&distance<19&&(facade||isVisible(p.x,p.y)))queue.push({depth:p.x+p.y-(facade?.3:0),draw:()=>{const a=P(p.x,p.y),front=p.x+p.y>state.player.x+state.player.y&&Math.abs(a.x-target.x)<140&&distance<5;shadow(a.x,a.y,p.size*.25,p.size*.08,.45);sprite(p.type,a.x,a.y,p.size,front?.4:1);if(p.type==='generator')glow(a.x,a.y-50,75,'#4bbfff',.18);}});}
+ for(const p of props){const facade=['factory','tower','railing'].includes(p.type),distance=Math.hypot(p.x-state.player.x,p.y-state.player.y);if(display(p.x,p.y)&&distance<19&&(facade||isVisible(p.x,p.y)))queue.push({depth:p.x+p.y-(facade?.3:0),draw:()=>{const a=P(p.x,p.y),m=window.SiegeArt?.sprites?.[p.type],h=m?p.size*m.rect[3]/m.rect[2]:p.size,left=a.x-p.size*(m?.anchorX??.5),top=a.y-h*(m?.anchorY??.9),occludes=p.x+p.y>state.player.x+state.player.y&&target.x>left-35&&target.x<left+p.size+35&&target.y-65>top&&target.y-65<top+h;shadow(a.x,a.y,p.size*.25,p.size*.08,.45);sprite(p.type,a.x,a.y,p.size,occludes?.2:1);if(p.type==='generator')glow(a.x,a.y-50,75,'#4bbfff',.18);}});}
  for(const t of state.terminals||[])if(display(t.x,t.y))queue.push({depth:t.x+t.y,draw:()=>entity('terminal',t,state)});
  for(const n of state.nests||[])if(display(n.x,n.y))queue.push({depth:n.x+n.y,draw:()=>entity('nest',n,state)});
  for(const item of state.pickups||[])if(display(item.x,item.y))queue.push({depth:item.x+item.y-.01,draw:()=>drawPickup(item)});
