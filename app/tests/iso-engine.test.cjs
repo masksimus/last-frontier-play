@@ -303,6 +303,45 @@ test('boss minigun waits for its visible warning before firing actual projectile
   assert.ok(boss.telegraph > .6); assert.equal(state.enemyBullets.length, 0);
   game.debug.step(.74);
   assert.ok(state.enemyBullets.some(bullet => bullet.kind === 'fire' && bullet.damage > 0));
+  assert.ok(state.enemyBullets.every(bullet => bullet.sourceType === 'brute' && bullet.sourceIsBoss),
+    'the renderer can distinguish a titan gun from the marine muzzle');
+});
+
+test('a packed HD horde spreads its bodies while continuing pursuit', () => {
+  const game = boot(); game.start();
+  const state = game.debug.getState();
+  state.nests = [];
+  state.player.x = 4.5; state.player.y = 10; state.player.invulnerable = 1000;
+  // An open arena isolates crowd steering from the particular production layout;
+  // the real world mover and collision circles remain active.
+  state.level.map = Array.from({ length: 24 }, (_, y) => Array.from({ length: 24 }, (_, x) =>
+    x > 0 && y > 0 && x < 23 && y < 23 ? '.' : '#').join(''));
+  const template = state.enemies[0];
+  state.enemies = Array.from({ length: 6 }, (_, i) => Object.assign({}, template, {
+    id: 1000 + i, x: 11 + (i % 3) * .08, y: 10 + Math.floor(i / 3) * .08,
+    type: i < 4 ? 'crawler' : 'brute', isBoss: i === 5, r: i < 4 ? .22 : .36,
+    hp: 1000, maxHp: 1000, alerted: true, cooldown: 100, path: []
+  }));
+  // Exact shared centres previously never separated because sd2 was zero.
+  state.enemies[1].x = state.enemies[0].x; state.enemies[1].y = state.enemies[0].y;
+  const meanDistance = () => state.enemies.reduce((sum, enemy) => sum +
+    Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y), 0) / state.enemies.length;
+  const initialDistance = meanDistance();
+  game.debug.step(2);
+  let closest = Infinity, closestToBoss = Infinity;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const enemy = state.enemies[i];
+    assert.equal(enemy.r, i < 4 ? .22 : .36, 'soft spacing must preserve combat collision radii');
+    assert.equal(World.isWalkable(state.level, enemy.x, enemy.y, enemy.r), true);
+    for (let j = i + 1; j < state.enemies.length; j++) {
+      const other = state.enemies[j], distance = Math.hypot(enemy.x - other.x, enemy.y - other.y);
+      closest = Math.min(closest, distance);
+      if (enemy.isBoss || other.isBoss) closestToBoss = Math.min(closestToBoss, distance);
+    }
+  }
+  assert.ok(closest > .95, 'wide HD bodies should not remain packed at collision-circle spacing');
+  assert.ok(closestToBoss > 1.6, 'a brute-class boss still needs a titan-sized visual footprint');
+  assert.ok(meanDistance() < initialDistance - 1.5, 'the spreading horde must keep pursuing the player');
 });
 
 test('speed and critical upgrades improve movement and actual shot outcomes', () => {

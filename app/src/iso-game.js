@@ -446,7 +446,7 @@
     state.enemyBullets = state.enemyBullets.filter(b => b.ttl > 0);
   }
   function enemyShot(enemy, angle, speed, damage, kind) {
-    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage });
+    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
     effect('acid', enemy.x, enemy.y, .14, .25);
   }
   function updateEnemies(dt) {
@@ -462,6 +462,12 @@
         nest.spawnTimer = 2.3 + random() * 1.8;
       }
     }
+    // HD bodies are wider than their collision circles. Keep this a soft steering
+    // footprint so narrow passages, projectile hits and melee ranges stay unchanged.
+    const footprint = enemy => enemy.isBoss || enemy.type === 'queen' ? 1.45 : enemy.type === 'brute' ? .86 : .60;
+    // A shared start-of-step snapshot prevents the iteration order from giving the
+    // first moving bodies more room than the rest of the same crowd.
+    const neighbours = state.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({ enemy, x: enemy.x, y: enemy.y, footprint: footprint(enemy) }));
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0) continue;
       enemy.aliveTime += dt; enemy.anim += dt * 5; enemy.attackFlash = Math.max(0, enemy.attackFlash - dt); enemy.cooldown -= dt; enemy.repath -= dt;
@@ -485,7 +491,7 @@
           enemyShot(enemy, angle, enemy.type === 'queen' ? 9 : 8, enemy.type === 'queen' ? 13 : 10, 'fire');
           if (enemy.type === 'queen') enemyShot(enemy, angle + .12, 8.5, 10, 'fire');
           enemy.burstRemaining--; enemy.burstTimer = enemy.enraged ? .075 : .11; enemy.attackFlash = .12;
-          effect('muzzle', enemy.x + Math.cos(angle) * enemy.r, enemy.y + Math.sin(angle) * enemy.r, .08, .35, { angle, weapon: 'rifle' });
+          effect('muzzle', enemy.x + Math.cos(angle) * enemy.r, enemy.y + Math.sin(angle) * enemy.r, .08, .35, { angle, weapon: 'rifle', actorType: enemy.type, isBoss: !!enemy.isBoss });
         }
         continue;
       }
@@ -514,9 +520,9 @@
         effect('telegraph', enemy.x, enemy.y, enemy.telegraph, enemy.r + .45, { angle: enemy.chargeAngle, length: Math.min(d, 5) });
         continue;
       }
-      if (d < enemy.r + p.r + .16) {
+      const touchingPlayer = d < enemy.r + p.r + .16;
+      if (touchingPlayer) {
         if (enemy.cooldown <= 0) { damagePlayer(TYPES[enemy.type].damage, enemy); enemy.cooldown = enemy.type === 'crawler' ? .65 : .9; enemy.attackFlash = .2; }
-        continue;
       }
       let tx = p.x, ty = p.y;
       if (!los) {
@@ -526,19 +532,37 @@
         tx = enemy.path[0].x; ty = enemy.path[0].y;
       } else enemy.path = [];
       let dx = tx - enemy.x, dy = ty - enemy.y;
-      let length = Math.hypot(dx, dy); if (length < .01) continue;
-      let direction = 1;
+      let length = Math.max(.01, Math.hypot(dx, dy));
+      let direction = touchingPlayer ? 0 : 1;
       if (enemy.type === 'spitter' && los && d < 4.2) direction = -1;
       if (enemy.type === 'spitter' && los && d >= 4.2 && d < 6.3) direction = 0;
       dx = dx / length * direction; dy = dy / length * direction;
       const speed = TYPES[enemy.type].speed * difficulty.speed * (enemy.type === 'queen' && enemy.hp < enemy.maxHp * .4 ? 1.4 : 1);
       const separation = { x: 0, y: 0 };
-      for (const other of state.enemies) {
-        if (other === enemy || other.hp <= 0) continue;
-        const sx = enemy.x - other.x, sy = enemy.y - other.y, sd2 = sx * sx + sy * sy, minimum = enemy.r + other.r + .08;
-        if (sd2 > .0001 && sd2 < minimum * minimum) { const sd = Math.sqrt(sd2); const force = (minimum - sd) / minimum; separation.x += sx / sd * force; separation.y += sy / sd * force; }
+      for (const other of neighbours) {
+        if (other.enemy === enemy) continue;
+        let sx = enemy.x - other.x, sy = enemy.y - other.y;
+        const minimum = footprint(enemy) + other.footprint;
+        const sd2 = sx * sx + sy * sy;
+        if (sd2 >= minimum * minimum || !W.lineOfSight(state.level, enemy, other)) continue;
+        const sd = Math.sqrt(sd2);
+        if (sd < .001) {
+          // Spawned pairs can share a centre. Give each pair equal and opposite,
+          // deterministic directions without consuming the gameplay random stream.
+          const first = Math.min(enemy.id, other.enemy.id), last = Math.max(enemy.id, other.enemy.id);
+          const angle = (first * 2.39996 + last * .75488) % TAU, sign = enemy.id < other.enemy.id ? 1 : -1;
+          sx = Math.cos(angle) * sign; sy = Math.sin(angle) * sign;
+        } else { sx /= sd; sy /= sd; }
+        const force = (minimum - sd) / (minimum * .35);
+        separation.x += sx * force; separation.y += sy * force;
       }
-      W.move(state.level, enemy, (dx * speed + clamp(separation.x, -1.5, 1.5) * 2) * dt, (dy * speed + clamp(separation.y, -1.5, 1.5) * 2) * dt);
+      const separationLength = Math.hypot(separation.x, separation.y);
+      const separationScale = separationLength ? Math.min(3.4, speed * 1.8 / separationLength) : 0;
+      const vx = dx * speed + separation.x * separationScale, vy = dy * speed + separation.y * separationScale;
+      const velocityLength = Math.hypot(vx, vy), velocityScale = velocityLength > speed * 1.35 ? speed * 1.35 / velocityLength : 1;
+      // Repulsion is a bounded velocity, never a position correction: dt and the
+      // existing wall-aware mover still govern every normal pursuit step.
+      W.move(state.level, enemy, vx * velocityScale * dt, vy * velocityScale * dt);
     }
     state.enemies = state.enemies.filter(enemy => enemy.hp > 0);
   }

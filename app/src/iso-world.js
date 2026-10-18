@@ -19,12 +19,48 @@ function makeMap(rectangles){
  return cells.map(row=>row.join(''));
 }
 
+// The loading yard has one connected apron, with solid equipment islands rather
+// than room shells. A prop footprint is inclusive tile bounds and is shared by
+// collision, line of sight and the renderer; visual-only dressing has no footprint.
+const FREIGHT_BOUNDS=[2,2,33,27];
+const FREIGHT_PROPS=[
+ {id:'freight-container-north',type:'container',x:15,y:5.5,size:245,solid:true,footprint:[13,4,16,6]},
+ {id:'freight-generator-west',type:'generator',x:5.5,y:13.5,size:180,solid:true,footprint:[4,12,6,14]},
+ {id:'freight-container-east',type:'container',x:25,y:13.5,size:240,solid:true,footprint:[23,12,26,14]},
+ {id:'freight-generator-south',type:'generator',x:16,y:19.5,size:195,solid:true,footprint:[14,18,17,20]},
+ {id:'freight-barrels-east',type:'barrels',x:29.5,y:15.5,size:155,solid:true,footprint:[28,14,30,16]},
+ {id:'freight-container-south',type:'container',x:15,y:24.5,size:240,solid:true,footprint:[13,23,16,25]},
+ {id:'freight-barrels-entry',type:'barrels',x:3.1,y:3.6,size:95,solid:false},
+ {id:'freight-crates-entry',type:'crate',x:3,y:10.6,size:90,solid:false},
+ {id:'freight-barrels-north',type:'barrels',x:19.5,y:3.1,size:100,solid:false},
+ {id:'freight-crates-west',type:'crate',x:3.1,y:18,size:92,solid:false},
+ {id:'freight-barrels-exit',type:'barrels',x:32.6,y:26.2,size:100,solid:false}
+];
+function makeYard(bounds,props){
+ const cells=makeMap([bounds]).map(row=>row.split(''));
+ for(const prop of props){
+  if(!prop.solid||!prop.footprint)continue;
+  const [left,top,right,bottom]=prop.footprint;
+  for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++)cells[y][x]='#';
+ }
+ return cells.map(row=>row.join(''));
+}
+
 const LEVELS=[
  {
-  id:'freight',name:'01 / ГРУЗОВОЙ ТЕРМИНАЛ',subtitle:'Подземный комплекс «Рубеж» · погрузочный ярус',
-  brief:'Связь с комплексом оборвалась двадцать минут назад. Разгрузочный шлюз заперт; резервное питание находится в северном складе. Зачисти помещения и выжги два очага заражения.',
-  objective:'Включить питание склада, уничтожить 2 гнезда и дойти до шлюза.',
-  map:makeMap([[2,3,12,10],[20,3,32,10],[10,7,23,9],[2,18,12,26],[20,18,32,26],[6,9,9,20],[24,9,27,20],[14,12,20,17],[7,14,26,16]]),
+  id:'freight',name:'01 / ПРОМЫШЛЕННЫЙ ДВОР',subtitle:'Комплекс «Рубеж» · открытая грузовая площадка A-7',
+  brief:'Связь с комплексом оборвалась двадцать минут назад. Промышленный двор захвачен заражёнными, разгрузочный шлюз заперт. Пробейся через открытую площадку между контейнерами, включи резервное питание на севере и выжги два очага заражения.',
+  objective:'Включить питание двора, уничтожить 2 гнезда и дойти до шлюза.',
+  map:makeYard(FREIGHT_BOUNDS,FREIGHT_PROPS),
+  environment:{kind:'industrial-yard',floor:'wet-concrete',bounds:FREIGHT_BOUNDS,props:FREIGHT_PROPS,
+   backdrop:[
+    {id:'freight-factory-west',type:'factory',x:3,y:1,size:500},
+    {id:'freight-tower-west',type:'tower',x:11,y:.7,size:235},
+    {id:'freight-factory-side',type:'factory',x:.7,y:10.2,size:490},
+    {id:'freight-tower-side',type:'tower',x:.7,y:20.5,size:240},
+    {id:'freight-factory-north',type:'factory',x:21,y:1,size:530},
+    {id:'freight-tower-east',type:'tower',x:32,y:.7,size:250}
+   ]},
   spawn:{x:4.5,y:6.5},exit:{x:30.5,y:24.5},
   terminals:[{id:'freight-power',x:29.5,y:5.5,label:'РЕЗЕРВНОЕ ПИТАНИЕ'}],
   nests:[{id:'freight-nest-a',x:5.5,y:23.5,hp:200},{id:'freight-nest-b',x:22.5,y:23.5,hp:240}],

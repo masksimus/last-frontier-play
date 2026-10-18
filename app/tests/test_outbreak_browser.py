@@ -282,7 +282,7 @@ def verify_upgrade_purchase(page, item):
 def verify_reference_battle(page, item, mobile=False):
     """Arrange a repeatable view of real final-wave actors, then use real fire."""
     page.wait_for_function("""() => {const r=OutbreakRenderer.status();
-        return r.hdAssetsReady === true && r.spriteRegions >= 16
+        return r.hdAssetsReady === true && r.yardGroundReady === true && r.spriteRegions >= 16
           && r.artDirection === 'industrial-siege-hd';}""", timeout=10000)
     prepare_final_wave(page, item)
     fixture = page.evaluate("""() => {const s=OutbreakDebug.getState();
@@ -290,14 +290,14 @@ def verify_reference_battle(page, item, mobile=False):
         if(!boss)throw Error('Final wave has no production boss');
         const ordinary=s.enemies.filter(e=>e!==boss).slice(0,8);
         if(ordinary.length<8)throw Error('Final wave lacks a visible horde');
-        const poses=[[5.1,5.2],[8.6,7.7],[4.1,8.3],[7.4,4.1],
-                     [10.3,7.1],[5.3,9.1],[10.8,4.5],[9.3,9.1]];
-        s.player.x=4.1;s.player.y=7.6;s.player.invulnerable=1e6;
+        const poses=[[5.3,12.0],[8.8,11.6],[10.4,8.4],[7.0,6.8],
+                     [10.5,5.2],[5.0,8.0],[12.8,9.4],[4.3,6.3]];
+        s.player.x=6.3;s.player.y=10.2;s.player.invulnerable=1e6;
         s.player.cooldown=0;s.player.reload=0;s.player.clip.rifle=30;
         s.player.weapon='rifle';s.player.grenades=Math.max(1,s.player.grenades);
         const actors=[boss,...ordinary];
         for(let i=0;i<actors.length;i++){
-          const e=actors[i],[x,y]=i===0?[10.8,6.9]:poses[i-1];
+          const e=actors[i],[x,y]=i===0?[12.4,3.8]:poses[i-1];
           if(!OutbreakWorld.isWalkable(s.level,x,y,e.r))throw Error('Visual fixture pose is inside a wall');
           e.x=x;e.y=y;e.cooldown=1e6;e.telegraph=1e6;e.hp=e.maxHp=Math.max(1200,e.maxHp);
           e.path=[];e.charge=0;e.angle=Math.atan2(s.player.y-y,s.player.x-x);
@@ -307,7 +307,7 @@ def verify_reference_battle(page, item, mobile=False):
         const toast=document.getElementById('toast');if(toast)toast.classList.add('hidden');
         return {bossId:boss.id,actors:actors.map(e=>({id:e.id,type:e.type,isBoss:!!e.isBoss,x:e.x,y:e.y})),
           method:'Test-only placement and increased target HP of actual final-wave actors, plus player invulnerability; real rifle and grenade input. Not an unmodified playthrough.'};}""")
-    teleport(page, 4.1, 7.6)
+    teleport(page, 6.3, 10.2)
     target = page.evaluate("""id => {const e=OutbreakDebug.getState().enemies.find(e=>e.id===id);
         return OutbreakRenderer.actorAimPoint?OutbreakRenderer.actorAimPoint(e):OutbreakRenderer.worldToScreen(e.x,e.y);}""",
         fixture["bossId"])
@@ -512,7 +512,7 @@ def run():
                     require(page.locator("#continue").is_hidden(), "Fresh profile has a Continue checkpoint")
                     require(page.evaluate("document.documentElement.scrollWidth <= innerWidth"), "Horizontal overflow")
                     page.wait_for_function("""() => {const r=OutbreakRenderer.status();
-                        return r.hdAssetsReady === true && r.spriteRegions >= 16
+                        return r.hdAssetsReady === true && r.yardGroundReady === true && r.spriteRegions >= 16
                           && r.artDirection === 'industrial-siege-hd';}""", timeout=10000)
                     item["checks"].append("industrial HD artwork and all 16 actor/prop/weapon regions are ready")
                     screenshot(page, item, "home")
@@ -530,6 +530,8 @@ def run():
                     page.locator("#deploy").click()
                     mode(page, "playing")
                     require(page.locator("#hud").is_visible(), "Combat HUD missing")
+                    require(page.evaluate("OutbreakRenderer.status().environment") == "industrial-yard",
+                            "First sector is not the open industrial yard")
                     page.evaluate("OutbreakDebug.getState().player.invulnerable=1e6")
                     require(state(page)["wave"] == 1 and state(page)["enemies"] >= 8,
                             "First deploy does not start wave one with a visible threat group")

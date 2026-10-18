@@ -2,7 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const W=require('../src/iso-world.js');
 
-test('three enclosed facility floors connect every encounter, pickup and objective',()=>{
+test('three bounded sectors connect every encounter, pickup and objective',()=>{
  assert.equal(W.LEVELS.length,3);
  assert.equal(new Set(W.LEVELS.map(l=>l.map.join('\n'))).size,3);
  for(let index=0;index<W.LEVELS.length;index++){
@@ -13,7 +13,7 @@ test('three enclosed facility floors connect every encounter, pickup and objecti
   assert.ok(level.map.at(-1).split('').every(cell=>cell!=='.'));
   assert.ok(level.map.every(row=>row[0]!=='.'&&row.at(-1)!=='.'));
   const floorCount=level.map.join('').split('').filter(cell=>cell==='.').length;
-  assert.ok(floorCount>300&&floorCount<650,'rooms and passages occupy a bounded part of the map');
+  assert.ok(floorCount>300&&floorCount<(index===0?850:650),'the yard and interior floors stay inside the perimeter');
   const queue=[level.spawn],seen=new Set([`${Math.floor(level.spawn.x)},${Math.floor(level.spawn.y)}`]);
   for(let i=0;i<queue.length;i++){
    const point=queue[i];
@@ -36,6 +36,41 @@ test('three enclosed facility floors connect every encounter, pickup and objecti
  assert.equal(W.LEVELS[0].terminals.length,1);assert.equal(W.LEVELS[0].nests.length,2);
  assert.equal(W.LEVELS[1].terminals.length,2);assert.equal(W.LEVELS[1].nests.length,3);
  assert.equal(W.LEVELS[2].boss.type,'queen');
+});
+
+test('the first sector has an open combat apron, long sightlines and several routes around cover',()=>{
+ const yard=W.level(0),floorCount=yard.map.join('').split('').filter(cell=>cell==='.').length;
+ assert.equal(yard.environment.kind,'industrial-yard');
+ assert.ok(floorCount>750,'the first sector is a broad yard rather than a room network');
+ // A full 15-by-10-tile arena joins the entrance and both halves of the yard.
+ for(let y=8;y<=17;y++)for(let x=8;x<=22;x++)assert.ok(W.isWalkable(yard,x+.5,y+.5,.3),'central fighting space stays open');
+ assert.ok(W.lineOfSight(yard,{x:2.5,y:10.5},{x:33.5,y:10.5}),'a horizontal freight lane crosses the entire yard');
+ assert.ok(W.lineOfSight(yard,{x:18.5,y:2.5},{x:18.5,y:27.5}),'a wide north-south lane stays open');
+ assert.ok(W.lineOfSight(yard,yard.spawn,{x:29.5,y:8.5}),'the entrance has a long clear combat sightline');
+ const start={x:12.5,y:5.5},goal={x:17.5,y:5.5};
+ assert.equal(W.lineOfSight(yard,start,goal),false,'a container is real cover for gunfire');
+ const path=W.findPath(yard,start,goal);
+ assert.ok(path.length>5&&path.length<15,'enemies can flank the container by a short route');
+ const body={...start,r:.2};W.move(yard,body,5,0);
+ assert.ok(body.x<=12.8&&body.x>=12.6,'solid equipment blocks movement through its art footprint');
+});
+
+test('yard dressing describes physical cover separately from perimeter scenery',()=>{
+ const yard=W.level(0),{bounds,props,backdrop}=yard.environment,[left,top,right,bottom]=bounds;
+ assert.ok(props.filter(prop=>prop.solid).length>=4);
+ assert.ok(backdrop.some(prop=>prop.type==='factory')&&backdrop.some(prop=>prop.type==='tower'));
+ const ids=[...props,...backdrop].map(prop=>prop.id);
+ assert.equal(new Set(ids).size,ids.length,'all explicit scenery has a stable identity');
+ for(const prop of props){
+  assert.ok(Number.isFinite(prop.x)&&Number.isFinite(prop.y)&&prop.size>0);
+  if(!prop.solid){assert.equal(prop.footprint,undefined);continue;}
+  const [l,t,r,b]=prop.footprint;
+  assert.ok(l>left&&r<right&&t>top&&b<bottom,'cover islands leave a route along the perimeter');
+  for(let y=t;y<=b;y++)for(let x=l;x<=r;x++)assert.equal(W.isWalkable(yard,x+.5,y+.5),false,'solid art and the collision grid agree');
+ }
+ assert.ok(Object.isFrozen(W.LEVELS[0].environment.props[0].footprint));
+ yard.environment.props[0].footprint[0]=99;
+ assert.notEqual(W.level(0).environment.props[0].footprint[0],99,'renderer metadata cannot corrupt later games');
 });
 
 test('level data is isolated from runtime destruction and cannot corrupt future runs',()=>{
