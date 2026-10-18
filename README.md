@@ -6,7 +6,7 @@
 
 GitHub Pages: https://masksimus.github.io/last-frontier-play/outbreak/
 
-Эта ссылка становится доступна после успешного workflow **Publish verified Outbreak alongside existing games**. Исторические версии в корне, `/v9/`, `/v9-2/`, `/v9-3/`, `/v10/` и `/v11/` сохраняются по своим SHA-256.
+Эта ссылка становится доступна после успешного workflow **Publish verified isometric Outbreak**. Исторические версии в корне, `/v9/`, `/v9-2/`, `/v9-3/`, `/v10/` и `/v11/` сохраняются по своим SHA-256.
 
 ## Управление
 
