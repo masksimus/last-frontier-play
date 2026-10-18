@@ -336,7 +336,7 @@
     if (!W.lineOfSight(state.level, p, muzzle)) muzzle = { x: p.x, y: p.y };
     for (let i = 0; i < spec.pellets; i++) {
       const angle = p.angle + (random() - .5) * spec.spread * 2;
-      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
+      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, startX: muzzle.x, startY: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
     }
     effect('muzzle', muzzle.x, muzzle.y, .075, p.weapon === 'shotgun' ? .4 : .22, { angle: p.angle, weapon: p.weapon });
     if (!state.reducedMotion) state.shake = Math.max(state.shake, p.weapon === 'shotgun' ? 3 : p.weapon === 'plasma' ? 2.6 : 1.4);
@@ -446,7 +446,7 @@
     state.enemyBullets = state.enemyBullets.filter(b => b.ttl > 0);
   }
   function enemyShot(enemy, angle, speed, damage, kind) {
-    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
+    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, startX: enemy.x, startY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
     effect('acid', enemy.x, enemy.y, .14, .25);
   }
   function updateEnemies(dt) {

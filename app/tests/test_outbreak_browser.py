@@ -298,7 +298,7 @@ def verify_reference_battle(page, item, mobile=False):
         s.player.weapon='rifle';s.player.grenades=Math.max(1,s.player.grenades);
         const actors=[boss,...ordinary];
         for(let i=0;i<actors.length;i++){
-          const e=actors[i],[x,y]=i===0?[12.4,3.8]:poses[i-1];
+          const e=actors[i],[x,y]=i===0?[10.5,4.5]:poses[i-1];
           if(!OutbreakWorld.isWalkable(s.level,x,y,e.r))throw Error('Visual fixture pose is inside a wall');
           e.x=x;e.y=y;e.cooldown=1e6;e.telegraph=1e6;e.hp=e.maxHp=Math.max(1200,e.maxHp);
           e.path=[];e.charge=0;e.angle=Math.atan2(s.player.y-y,s.player.x-x);
