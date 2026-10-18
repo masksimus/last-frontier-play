@@ -5,7 +5,7 @@
   "scripts": {
     "build": "python3 scripts/build_release.py",
     "build:vite": "vite build && python3 scripts/package_vite.py",
-    "test": "node --test --test-isolation=none tests/*.test.cjs",
+    "test": "node --test tests/*.test.cjs",
     "test:release": "python3 -m unittest discover -s tests -p 'test_release.py' -v",
     "verify": "npm run test && npm run test:release && npm run build && npm run verify:dist",
     "verify:dist": "python3 scripts/package_dist.py --verify-only",

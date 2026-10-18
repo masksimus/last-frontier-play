@@ -71,4 +71,3 @@ function advancePlayer(player,input,dt){
  player.invuln=Math.max(0,player.invuln-dt);player.fireTimer=Math.max(0,player.fireTimer-dt);
 }
 return{WIDTH,HEIGHT,TOTAL_WAVES,WAVE_SECONDS,clamp,norm,distance,collision,sweptCollision,advanceProjectile,mobStats,waveInfo,chooseMob,isBossWave,sampleUpgrades,canApplyUpgrade,applyUpgrade,newPlayer,bulletHit,advancePlayer,UPGRADES,UPGRADE_CAPS};});
-

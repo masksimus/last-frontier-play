@@ -45,4 +45,3 @@ function bossVolley(boss,player,phase='fan'){
 function bossPhase(hp,maxhp){return hp>0&&hp<=maxhp*.5?'enraged':'normal'}
 return Object.freeze({ORDER,WEAPONS,nextWeapon,makeVolley,weaponRange,shotReach,inRange,bossVolley,bossPhase});
 });
-

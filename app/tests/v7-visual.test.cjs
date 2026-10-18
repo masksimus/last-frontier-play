@@ -16,4 +16,3 @@ t('local character lighting has bounded budget for mobile',()=>{
  a.match(code,/visualVersion:12/);
  a.match(code,/fixed 3\/4 painterly poses/);
 });
-

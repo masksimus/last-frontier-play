@@ -116,4 +116,3 @@ init().catch(err=>{
   const el=document.getElementById('pixi-stage');if(el)el.remove();
   status.ready=false;status.renderer='canvas-fallback';
 });
-
