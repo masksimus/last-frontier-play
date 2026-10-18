@@ -55,6 +55,7 @@ jobs:
             app/dist/build-manifest.json
             app/docs/OUTBREAK_BROWSER_RESULTS.json
             app/docs/screenshots/outbreak-*.png
+            app/docs/screenshots/siege-*.png
             app/package-lock.json
           if-no-files-found: error
           retention-days: 14

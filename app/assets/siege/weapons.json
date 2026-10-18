@@ -1,0 +1,51 @@
+{
+  "file": "weapons.png",
+  "width": 1536,
+  "height": 1024,
+  "sprites": {
+    "weaponPistol": {
+      "rect": [
+        66,
+        143,
+        514,
+        328
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "displayWidth": 136
+    },
+    "weaponShotgun": {
+      "rect": [
+        603,
+        166,
+        924,
+        267
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "displayWidth": 136
+    },
+    "weaponRifle": {
+      "rect": [
+        13,
+        589,
+        777,
+        322
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "displayWidth": 136
+    },
+    "weaponPlasma": {
+      "rect": [
+        790,
+        596,
+        725,
+        300
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.5,
+      "displayWidth": 136
+    }
+  }
+}

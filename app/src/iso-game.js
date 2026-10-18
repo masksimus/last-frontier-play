@@ -35,6 +35,7 @@
   let seed = 7102026;
   let enemyId = 0;
   let queued = [];
+  let pendingWaves = [];
   let lastFrame = 0;
   let uiTimer = 0;
   let muted = false;
@@ -46,12 +47,59 @@
   function random() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
   function playerDefault() {
     return { x: 0, y: 0, r: .22, hp: 120, maxHp: 120, armor: 45, maxArmor: 100, angle: 0, weapon: 'rifle', owned: { pistol: true, rifle: true, shotgun: false, plasma: false },
-      ammo: { pistol: 0, shotgun: 0, rifle: 120, plasma: 0 }, clip: { pistol: 12, shotgun: 0, rifle: 30, plasma: 0 }, reload: 0, reloadWeapon: null, cooldown: 0, grenades: 3, cash: 180, moving: false, anim: 0, invulnerable: 0 };
+      ammo: { pistol: 0, shotgun: 0, rifle: 120, plasma: 0 }, clip: { pistol: 12, shotgun: 0, rifle: 30, plasma: 0 }, reload: 0, reloadWeapon: null, cooldown: 0, grenades: 3, cash: 180, level: 1, xp: 0, xpNeed: 80, upgrades: { damage: 0, speed: 0, health: 0, crit: 0 }, dashCooldown: 0, dashTime: 0, dashX: 1, dashY: 0, abilityCooldown: 0, moving: false, anim: 0, invulnerable: 0 };
   }
   function newState() {
-    return { mode: 'menu', levelIndex: 0, level: null, player: playerDefault(), difficulty: 'standard', enemies: [], bullets: [], enemyBullets: [], grenades: [], pickups: [], effects: [], decals: [], corpses: [], terminals: [], nests: [], time: 0, levelTime: 0, kills: 0, aim: { x: 1, y: 0 }, pointer: { x: innerWidth * .65, y: innerHeight * .5 }, shake: 0, flash: 0, toast: '', toastTime: 0, exitReady: false, reducedMotion: false, touch: touchDevice, spawnRemaining: 0, totalEnemies: 0 };
+    return { mode: 'menu', levelIndex: 0, level: null, player: playerDefault(), difficulty: 'standard', enemies: [], bullets: [], enemyBullets: [], grenades: [], pickups: [], effects: [], decals: [], corpses: [], terminals: [], nests: [], time: 0, levelTime: 0, kills: 0, aim: { x: 1, y: 0 }, pointer: { x: innerWidth * .65, y: innerHeight * .5 }, shake: 0, flash: 0, toast: '', toastTime: 0, exitReady: false, reducedMotion: false, touch: touchDevice, spawnRemaining: 0, totalEnemies: 0, wave: 1, waveProgress: 0, waveEnemiesRemaining: 0, waveInitialEnemies: 0, waveEnd: 3, bossesKilled: 0, resources: 5, resourcesCollected: 0, generatorActivated: false };
   }
   state = newState();
+  function xpForLevel(level) { return Math.round(80 * Math.pow(level, 1.25)); }
+  function awardXP(amount) {
+    const p = state.player;
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    p.xp += Math.floor(amount);
+    while (p.level < 30 && p.xp >= p.xpNeed) {
+      p.xp -= p.xpNeed; p.level++; p.xpNeed = xpForLevel(p.level);
+      p.maxHp += 5; p.hp = Math.min(p.maxHp, p.hp + 20);
+      effect('pickup', p.x, p.y, .8, 1.2); sound('pickup');
+      toast('УРОВЕНЬ ' + p.level + ' · +5 К ЗДОРОВЬЮ', 3);
+    }
+    if (p.level === 30) p.xp = Math.min(p.xp, p.xpNeed - 1);
+  }
+  function upgradePrice(key) {
+    return Object.hasOwn(state.player.upgrades, key) ? 180 + state.player.upgrades[key] * 160 : Infinity;
+  }
+  function purchaseUpgrade(key) {
+    const p = state.player;
+    if (state.mode !== 'playing' || !Object.hasOwn(p.upgrades, key) || p.upgrades[key] >= 6 || p.cash < upgradePrice(key)) return false;
+    p.cash -= upgradePrice(key); p.upgrades[key]++;
+    if (key === 'health') { p.maxHp += 20; p.hp = Math.min(p.maxHp, p.hp + 20); }
+    sound('pickup'); effect('pickup', p.x, p.y, .5, .7); updateUI();
+    return true;
+  }
+  function dashAction() {
+    const p = state.player;
+    if (state.mode !== 'playing' || p.dashCooldown > 0 || p.dashTime > 0) return false;
+    let sx = (input.keys.has('KeyD') || input.keys.has('ArrowRight') ? 1 : 0) - (input.keys.has('KeyA') || input.keys.has('ArrowLeft') ? 1 : 0) + input.move.x;
+    let sy = (input.keys.has('KeyS') || input.keys.has('ArrowDown') ? 1 : 0) - (input.keys.has('KeyW') || input.keys.has('ArrowUp') ? 1 : 0) + input.move.y;
+    const dx = sx + sy * 2, dy = -sx + sy * 2, length = Math.hypot(dx, dy);
+    if (length > .05) { p.dashX = dx / length; p.dashY = dy / length; }
+    else { p.dashX = Math.cos(p.angle); p.dashY = Math.sin(p.angle); }
+    p.dashTime = .18; p.dashCooldown = 3.8; p.invulnerable = Math.max(p.invulnerable, .24);
+    effect('charge', p.x, p.y, .22, .7); updateUI(); return true;
+  }
+  function useAbility() {
+    const p = state.player;
+    if (state.mode !== 'playing' || p.abilityCooldown > 0 || state.resources < 5) return false;
+    state.resources -= 5; p.abilityCooldown = 8;
+    effect('shockwave', p.x, p.y, .6, 3.8);
+    for (const enemy of state.enemies) if (enemy.hp > 0 && dist(p, enemy) < 3.8 + enemy.r && W.lineOfSight(state.level, p, enemy)) {
+      damageEnemy(enemy, 180 * (1 + p.upgrades.damage * .11), { x: p.x, y: p.y, kind: 'plasma' });
+      enemy.cooldown = Math.max(enemy.cooldown, .65);
+    }
+    for (const nest of state.nests) if (nest.hp > 0 && dist(p, nest) < 3.8 && W.lineOfSight(state.level, p, nest)) damageNest(nest, 140);
+    sound('plasma'); updateUI(); return true;
+  }
   function sound(kind) {
     if (muted || performance.now() < nextAudio) return;
     nextAudio = performance.now() + (kind === 'shot' ? 38 : 18);
@@ -102,8 +150,16 @@
     if (!raw || typeof raw !== 'object') return null;
     const fresh = playerDefault();
     for (const key of ['hp', 'maxHp', 'armor', 'cash', 'grenades']) if (!Number.isFinite(raw[key])) return null;
-    if (raw.maxHp !== 120 || raw.hp < 1 || raw.hp > 120 || raw.armor < 0 || raw.armor > 100 || raw.cash < 0 || raw.cash > 100000 || raw.grenades < 0 || raw.grenades > 12) return null;
+    const level = raw.level === undefined ? 1 : raw.level;
+    const xp = raw.xp === undefined ? 0 : raw.xp;
+    if (!Number.isInteger(level) || level < 1 || level > 30 || !Number.isInteger(xp) || xp < 0 || xp >= xpForLevel(level)) return null;
+    const upgrades = raw.upgrades === undefined ? fresh.upgrades : raw.upgrades;
+    if (!upgrades || typeof upgrades !== 'object') return null;
+    for (const key of Object.keys(fresh.upgrades)) if (!Number.isInteger(upgrades[key]) || upgrades[key] < 0 || upgrades[key] > 6) return null;
+    const maxHp = 120 + (level - 1) * 5 + upgrades.health * 20;
+    if (raw.maxHp !== maxHp || raw.hp < 1 || raw.hp > maxHp || raw.armor < 0 || raw.armor > 100 || raw.cash < 0 || raw.cash > 100000 || raw.grenades < 0 || raw.grenades > 12) return null;
     if (!raw.owned || !raw.ammo || !raw.clip || typeof raw.weapon !== 'string' || !Object.hasOwn(WEAPONS, raw.weapon) || !raw.owned[raw.weapon]) return null;
+    fresh.level = level; fresh.xp = xp; fresh.xpNeed = xpForLevel(level); fresh.upgrades = Object.fromEntries(Object.keys(fresh.upgrades).map(key => [key, upgrades[key]])); fresh.maxHp = maxHp;
     fresh.hp = raw.hp; fresh.armor = raw.armor; fresh.cash = Math.floor(raw.cash); fresh.grenades = Math.floor(raw.grenades); fresh.weapon = raw.weapon;
     for (const [key, spec] of Object.entries(WEAPONS)) {
       if (typeof raw.owned[key] !== 'boolean' || !Number.isInteger(raw.ammo[key]) || raw.ammo[key] < 0 || raw.ammo[key] > (Number.isFinite(spec.reserve) ? spec.reserve : 0) || !Number.isInteger(raw.clip[key]) || raw.clip[key] < 0 || raw.clip[key] > spec.clip) return null;
@@ -114,18 +170,20 @@
   }
   function inventory() {
     const p = state.player;
-    return { hp: p.hp, maxHp: p.maxHp, armor: p.armor, cash: p.cash, grenades: p.grenades, weapon: p.weapon, owned: Object.assign({}, p.owned), ammo: Object.assign({}, p.ammo), clip: Object.assign({}, p.clip) };
+    return { hp: p.hp, maxHp: p.maxHp, level: p.level, xp: p.xp, xpNeed: p.xpNeed, upgrades: Object.assign({}, p.upgrades), armor: p.armor, cash: p.cash, grenades: p.grenades, weapon: p.weapon, owned: Object.assign({}, p.owned), ammo: Object.assign({}, p.ammo), clip: Object.assign({}, p.clip) };
   }
   function readCheckpoint() {
     try {
       const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (!raw || raw.version !== 1 || !Number.isInteger(raw.levelIndex) || raw.levelIndex < 0 || raw.levelIndex >= W.LEVELS.length || !Object.hasOwn(DIFFICULTIES, raw.difficulty) || !Number.isInteger(raw.kills) || raw.kills < 0 || raw.kills > 10000 || !Number.isFinite(raw.time) || raw.time < 0 || raw.time > 86400) return null;
       const p = cleanInventory(raw.player); if (!p) return null;
-      return Object.assign({}, raw, { player: p });
+      const resources = raw.resources === undefined ? 5 : raw.resources, collected = raw.resourcesCollected === undefined ? 0 : raw.resourcesCollected, bosses = raw.bossesKilled === undefined ? 0 : raw.bossesKilled;
+      if (!Number.isInteger(resources) || resources < 0 || resources > 999 || !Number.isInteger(collected) || collected < 0 || collected > 10000 || !Number.isInteger(bosses) || bosses < 0 || bosses > 3 || (raw.generatorActivated !== undefined && typeof raw.generatorActivated !== 'boolean')) return null;
+      return Object.assign({}, raw, { player: p, resources, resourcesCollected: collected, bossesKilled: bosses, generatorActivated: !!raw.generatorActivated });
     } catch (_) { return null; }
   }
   function saveCheckpoint() {
-    const save = { version: 1, levelIndex: state.levelIndex, player: inventory(), difficulty: state.difficulty, time: state.time, kills: state.kills };
+    const save = { version: 1, levelIndex: state.levelIndex, player: inventory(), difficulty: state.difficulty, time: state.time, kills: state.kills, resources: state.resources, resourcesCollected: state.resourcesCollected, bossesKilled: state.bossesKilled, generatorActivated: state.generatorActivated };
     checkpoint = save;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (_) { /* Private browser mode may disallow storage. */ }
     updateContinue();
@@ -145,7 +203,7 @@
   function continueGame() {
     checkpoint = readCheckpoint(); if (!checkpoint) { toast('Сохранение недоступно. Начните новую операцию.'); updateContinue(); return; }
     const reducedMotion = state.reducedMotion;
-    state = newState(); state.reducedMotion = reducedMotion; state.player = cleanInventory(checkpoint.player); state.difficulty = checkpoint.difficulty; state.time = checkpoint.time; state.kills = checkpoint.kills;
+    state = newState(); state.reducedMotion = reducedMotion; state.player = cleanInventory(checkpoint.player); state.difficulty = checkpoint.difficulty; state.time = checkpoint.time; state.kills = checkpoint.kills; state.resources = checkpoint.resources; state.resourcesCollected = checkpoint.resourcesCollected; state.bossesKilled = checkpoint.bossesKilled; state.generatorActivated = checkpoint.generatorActivated;
     prepareLevel(checkpoint.levelIndex, false);
   }
   function prepareLevel(index, writeSave) {
@@ -153,31 +211,49 @@
     state.enemies = []; state.bullets = []; state.enemyBullets = []; state.grenades = []; state.effects = []; state.decals = []; state.corpses = [];
     state.pickups = (state.level.supplies || []).map(p => Object.assign({ amount: p.kind === 'credits' ? 90 : 0, age: 0 }, p));
     state.terminals = (state.level.terminals || []).map(t => Object.assign({ active: false }, t));
-    const initialCount = (state.level.enemyGroups || []).reduce((sum, group) => sum + Math.max(0, group.count | 0), 0);
+    const initialCount = (state.level.enemyGroups || []).reduce((sum, group) => sum + Math.max(0, group.count | 0), 0) + 8;
+    const boss = state.level.boss ? Object.assign({}, state.level.boss, { isBoss: true, name: 'МАТКА ЗАРАЖЕНИЯ' }) : { type: 'brute', x: state.level.exit.x - (index === 0 ? 1 : 0), y: state.level.exit.y + (index === 1 ? 1 : 0), hp: 800 + index * 300, isBoss: true, name: index === 0 ? 'СТРАЖ ГРУЗОВОГО ЯРУСА' : 'КОМАНДИР БИОИЗОЛЯЦИИ' };
     const targetCount = [82, 111, 139][index] || 100;
     const nests = state.level.nests || [];
-    let remainingBudget = Math.max(0, targetCount - initialCount - (state.level.boss ? 1 : 0));
+    let remainingBudget = Math.max(0, targetCount - initialCount - 1);
     state.nests = nests.map((nest, i) => {
       const budget = Math.ceil(remainingBudget / (nests.length - i)); remainingBudget -= budget;
       return Object.assign({}, nest, { hp: nest.hp || 260 + index * 100, maxHp: nest.hp || 260 + index * 100, budget, spawnTimer: 2 + i * 1.8, anim: 0 });
     });
-    queued = [];
-    for (const group of state.level.enemyGroups || []) {
-      for (let i = 0; i < group.count; i++) queued.push({ x: group.x, y: group.y, type: group.type, offset: i });
+    const waveCount = index === 2 ? 4 : 3;
+    pendingWaves = Array.from({ length: waveCount }, () => []);
+    const groups = (state.level.enemyGroups || []).slice().sort((a, b) => dist(a, state.level.spawn) - dist(b, state.level.spawn));
+    groups.forEach((group, groupIndex) => {
+      const waveIndex = Math.min(waveCount - 1, Math.floor(groupIndex * waveCount / groups.length));
+      for (let i = 0; i < group.count; i++) pendingWaves[waveIndex].push({ x: group.x, y: group.y, type: group.type, offset: i });
+    });
+    // Eight real threats share the player's first room, in view but beyond contact range.
+    const entrancePoints = [];
+    for (let y = 0; y < state.level.map.length; y++) for (let x = 0; x < state.level.map[y].length; x++) {
+      const point = { x: x + .5, y: y + .5 };
+      const distance = dist(point, state.level.spawn);
+      if (distance >= 3.1 && distance <= 5.8 && W.isWalkable(state.level, point.x, point.y, TYPES.crawler.r) && W.lineOfSight(state.level, state.level.spawn, point)) entrancePoints.push(point);
     }
-    if (state.level.boss) queued.push(Object.assign({ type: 'queen', offset: 0 }, state.level.boss));
-    state.totalEnemies = initialCount + state.nests.reduce((sum, n) => sum + n.budget, 0) + (state.level.boss ? 1 : 0);
+    entrancePoints.sort((a, b) => dist(a, state.level.spawn) - dist(b, state.level.spawn));
+    for (let i = 0; i < 8; i++) {
+      const point = entrancePoints[Math.min(entrancePoints.length - 1, i * 2)] || { x: state.level.spawn.x + 3.2, y: state.level.spawn.y };
+      pendingWaves[0].push({ type: 'crawler', x: point.x, y: point.y, offset: 0, exact: true });
+    }
+    pendingWaves[waveCount - 1].push(Object.assign({ offset: 0 }, boss));
+    queued = [];
+    state.wave = [1, 4, 7][index]; state.waveEnd = [3, 6, 10][index];
+    state.totalEnemies = initialCount + state.nests.reduce((sum, n) => sum + n.budget, 0) + 1;
     state.spawnRemaining = state.totalEnemies;
     state.levelTime = 0; state.exitReady = false; state.shake = 0; state.flash = 0;
-    const p = state.player; p.x = state.level.spawn.x; p.y = state.level.spawn.y; p.angle = -.6; p.reload = 0; p.reloadWeapon = null; p.cooldown = 0; p.invulnerable = 1.5; p.moving = false;
+    const p = state.player; p.x = state.level.spawn.x; p.y = state.level.spawn.y; p.angle = -.6; p.reload = 0; p.reloadWeapon = null; p.cooldown = 0; p.invulnerable = 1.5; p.moving = false; p.dashTime = 0; p.dashCooldown = 0; p.abilityCooldown = 0;
     state.aim = { x: p.x + 2, y: p.y - 1 };
     levelStartInventory = inventory();
     if (writeSave) saveCheckpoint();
     if ($('sectorBriefTitle')) $('sectorBriefTitle').textContent = state.level.name;
     if ($('sectorBriefText')) $('sectorBriefText').textContent = state.level.brief;
-    if ($('sectorBriefMeta')) $('sectorBriefMeta').textContent = state.terminals.length + ' ТЕРМИНАЛА · ' + state.nests.length + ' ГНЕЗДА · ' + (state.level.boss ? 'МАТКА' : 'ЗАЧИСТКА');
+    if ($('sectorBriefMeta')) $('sectorBriefMeta').textContent = state.terminals.length + ' ТЕРМИНАЛА · ' + state.nests.length + ' ГНЕЗДА · ' + waveCount + ' ВОЛНЫ · БОСС';
     // The briefing already shows the actual map, not a separate decorative scene.
-    fillInitialEnemies();
+    beginWave();
     setMode('briefing');
   }
   function placeNear(x, y, radius, countOffset) {
@@ -192,11 +268,27 @@
   }
   function spawnEnemy(spec) {
     const base = TYPES[spec.type] || TYPES.crawler, difficulty = DIFFICULTIES[state.difficulty];
-    const position = placeNear(spec.x, spec.y, base.r, spec.offset);
+    const position = spec.exact && W.isWalkable(state.level, spec.x, spec.y, base.r) && dist(spec, state.player) > 2.8 ? { x: spec.x, y: spec.y } : placeNear(spec.x, spec.y, base.r, spec.offset);
     if (!position) return false;
     const maxHp = Math.round((spec.hp || base.hp) * difficulty.hp);
-    state.enemies.push({ id: ++enemyId, type: spec.type, x: position.x, y: position.y, r: base.r, hp: maxHp, maxHp, angle: 0, anim: random() * TAU, attackFlash: 0, cooldown: .6 + random(), path: [], repath: random() * .7, alerted: false, charge: 0, telegraph: 0, chargeAngle: 0, aliveTime: 0 });
+    state.enemies.push({ id: ++enemyId, type: spec.type, isBoss: !!spec.isBoss, name: spec.name || '', enraged: false, burstRemaining: 0, burstTimer: 0, x: position.x, y: position.y, r: base.r, hp: maxHp, maxHp, angle: 0, anim: random() * TAU, attackFlash: 0, cooldown: .6 + random(), path: [], repath: random() * .7, alerted: false, charge: 0, telegraph: 0, chargeAngle: 0, aliveTime: 0 });
     return true;
+  }
+  function beginWave() {
+    if (!pendingWaves.length) return false;
+    queued = pendingWaves.shift();
+    for (const nest of state.nests) nest.waveBudget = nest.hp > 0 ? Math.ceil(nest.budget / (pendingWaves.length + 1)) : 0;
+    state.waveInitialEnemies = queued.length + state.nests.reduce((sum, nest) => sum + nest.waveBudget, 0);
+    state.waveEnemiesRemaining = state.waveInitialEnemies; state.waveProgress = 0;
+    fillInitialEnemies();
+    return true;
+  }
+  function updateWave() {
+    state.waveEnemiesRemaining = queued.length + state.enemies.filter(enemy => enemy.hp > 0).length + state.nests.reduce((sum, nest) => sum + (nest.hp > 0 ? nest.waveBudget || 0 : 0), 0);
+    state.waveProgress = clamp(1 - state.waveEnemiesRemaining / Math.max(1, state.waveInitialEnemies), 0, 1);
+    if (state.waveEnemiesRemaining === 0 && pendingWaves.length) {
+      state.wave++; beginWave(); toast('ВОЛНА ' + state.wave + '/10 · ПОДКРЕПЛЕНИЕ ЗАРАЖЁННЫХ', 3); sound('alert');
+    }
   }
   function fillInitialEnemies() {
     let attempts = 0;
@@ -244,7 +336,7 @@
     if (!W.lineOfSight(state.level, p, muzzle)) muzzle = { x: p.x, y: p.y };
     for (let i = 0; i < spec.pellets; i++) {
       const angle = p.angle + (random() - .5) * spec.spread * 2;
-      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage, r: p.weapon === 'plasma' ? .14 : .055 });
+      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
     }
     effect('muzzle', muzzle.x, muzzle.y, .075, p.weapon === 'shotgun' ? .4 : .22, { angle: p.angle, weapon: p.weapon });
     if (!state.reducedMotion) state.shake = Math.max(state.shake, p.weapon === 'shotgun' ? 3 : p.weapon === 'plasma' ? 2.6 : 1.4);
@@ -275,7 +367,10 @@
     if (enemy.hp <= 0) killEnemy(enemy);
   }
   function killEnemy(enemy) {
-    state.kills++; state.player.cash += TYPES[enemy.type].cash; state.spawnRemaining = Math.max(0, state.spawnRemaining - 1);
+    state.kills++; state.player.cash += TYPES[enemy.type].cash; awardXP(enemy.isBoss ? 160 : enemy.type === 'brute' ? 45 : enemy.type === 'spitter' ? 24 : 16);
+    if (enemy.isBoss) { state.bossesKilled++; toast((enemy.name || 'БОСС') + ' УНИЧТОЖЕН · ' + state.bossesKilled + '/3', 4); }
+    if (state.kills % 6 === 0 || enemy.isBoss) state.pickups.push({ x: enemy.x, y: enemy.y, kind: 'resource', amount: enemy.isBoss ? 3 : 1, age: 0 });
+    state.spawnRemaining = Math.max(0, state.spawnRemaining - 1);
     state.corpses.push({ x: enemy.x, y: enemy.y, type: enemy.type, angle: enemy.angle, age: 0 }); if (state.corpses.length > 90) state.corpses.shift();
     state.decals.push({ x: enemy.x, y: enemy.y, r: enemy.type === 'queen' ? 1.1 : .3 + random() * .3, alpha: .55 + random() * .3, angle: random() * TAU }); if (state.decals.length > 100) state.decals.shift();
     if (random() < .18 || enemy.type === 'brute' || enemy.type === 'queen') {
@@ -288,7 +383,7 @@
     if (nest.hp <= 0) return;
     nest.hp -= amount; effect('blood', nest.x, nest.y, .18, .4);
     if (nest.hp <= 0) {
-      state.spawnRemaining = Math.max(0, state.spawnRemaining - nest.budget); nest.budget = 0; state.player.cash += 100;
+      state.spawnRemaining = Math.max(0, state.spawnRemaining - nest.budget); nest.budget = 0; nest.waveBudget = 0; state.player.cash += 100; awardXP(50);
       effect('explosion', nest.x, nest.y, .65, 1.6); sound('explosion'); toast('Гнездо уничтожено · +100 кредитов', 2.5);
       state.decals.push({ x: nest.x, y: nest.y, r: 1.1, alpha: .8, angle: random() * TAU });
     }
@@ -344,14 +439,14 @@
     for (const bullet of state.enemyBullets) {
       bullet.px = bullet.x; bullet.py = bullet.y; bullet.ttl -= dt;
       const nx = bullet.x + bullet.vx * dt, ny = bullet.y + bullet.vy * dt;
-      if (!W.lineOfSight(state.level, bullet, { x: nx, y: ny })) { bullet.ttl = 0; effect('acid', nx, ny, .25, .25); }
-      else if (Number.isFinite(segmentHit(bullet.x, bullet.y, nx, ny, state.player.x, state.player.y, state.player.r + .12))) { damagePlayer(bullet.damage, bullet); bullet.ttl = 0; effect('acid', nx, ny, .3, .3); }
+      if (!W.lineOfSight(state.level, bullet, { x: nx, y: ny })) { bullet.ttl = 0; effect(bullet.kind === 'fire' ? 'spark' : 'acid', nx, ny, .25, .25); }
+      else if (Number.isFinite(segmentHit(bullet.x, bullet.y, nx, ny, state.player.x, state.player.y, state.player.r + .12))) { damagePlayer(bullet.damage, bullet); bullet.ttl = 0; effect(bullet.kind === 'fire' ? 'spark' : 'acid', nx, ny, .3, .3); }
       bullet.x = nx; bullet.y = ny;
     }
     state.enemyBullets = state.enemyBullets.filter(b => b.ttl > 0);
   }
-  function enemyShot(enemy, angle, speed, damage) {
-    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: 'acid', damage });
+  function enemyShot(enemy, angle, speed, damage, kind) {
+    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage });
     effect('acid', enemy.x, enemy.y, .14, .25);
   }
   function updateEnemies(dt) {
@@ -359,11 +454,11 @@
     fillInitialEnemies();
     for (const nest of state.nests) {
       nest.anim += dt;
-      if (nest.hp <= 0 || nest.budget <= 0) continue;
+      if (nest.hp <= 0 || nest.budget <= 0 || nest.waveBudget <= 0) continue;
       nest.spawnTimer -= dt;
       if (nest.spawnTimer <= 0 && state.enemies.length < 70 && dist(nest, p) < 15) {
         const type = state.levelIndex > 0 && random() < .21 ? 'spitter' : 'crawler';
-        if (spawnEnemy({ type, x: nest.x, y: nest.y, offset: 1 })) { nest.budget--; effect('spawn', nest.x, nest.y, .5, .7); }
+        if (spawnEnemy({ type, x: nest.x, y: nest.y, offset: 1 })) { nest.budget--; nest.waveBudget--; effect('spawn', nest.x, nest.y, .5, .7); }
         nest.spawnTimer = 2.3 + random() * 1.8;
       }
     }
@@ -371,12 +466,35 @@
       if (enemy.hp <= 0) continue;
       enemy.aliveTime += dt; enemy.anim += dt * 5; enemy.attackFlash = Math.max(0, enemy.attackFlash - dt); enemy.cooldown -= dt; enemy.repath -= dt;
       const d = dist(enemy, p), los = d < 17 && W.lineOfSight(state.level, enemy, p);
-      if (los || d < 5) enemy.alerted = true;
+      if ((los && d < 7) || d < 4.2) enemy.alerted = true;
       if (!enemy.alerted) continue;
       enemy.angle = Math.atan2(p.y - enemy.y, p.x - enemy.x);
+      if (enemy.isBoss && enemy.hp < enemy.maxHp * .45 && !enemy.enraged) {
+        enemy.enraged = true; enemy.burstRemaining = 0;
+        effect('telegraph', enemy.x, enemy.y, .8, enemy.r + 1.1, { angle: enemy.angle, length: 0 });
+        enemy.radialTimer = .8; toast('БОСС: ПЕРЕГРУЗКА · УКЛОНЯЙТЕСЬ', 2);
+      }
+      if (enemy.radialTimer > 0) {
+        enemy.radialTimer -= dt;
+        if (enemy.radialTimer <= 0) for (let i = 0; i < 16; i++) enemyShot(enemy, i * TAU / 16, 4.2, 13, 'fire');
+      }
+      if (enemy.burstRemaining > 0) {
+        enemy.burstTimer -= dt;
+        if (enemy.burstTimer <= 0) {
+          const angle = enemy.burstAngle + (random() - .5) * .15;
+          enemyShot(enemy, angle, enemy.type === 'queen' ? 9 : 8, enemy.type === 'queen' ? 13 : 10, 'fire');
+          if (enemy.type === 'queen') enemyShot(enemy, angle + .12, 8.5, 10, 'fire');
+          enemy.burstRemaining--; enemy.burstTimer = enemy.enraged ? .075 : .11; enemy.attackFlash = .12;
+          effect('muzzle', enemy.x + Math.cos(angle) * enemy.r, enemy.y + Math.sin(angle) * enemy.r, .08, .35, { angle, weapon: 'rifle' });
+        }
+        continue;
+      }
       if ((enemy.type === 'brute' || enemy.type === 'queen') && enemy.telegraph > 0) {
         enemy.telegraph -= dt;
-        if (enemy.telegraph <= 0) { enemy.charge = enemy.type === 'queen' ? .7 : .6; effect('charge', enemy.x, enemy.y, .2, enemy.r); }
+        if (enemy.telegraph <= 0) {
+          if (enemy.attackType === 'burst') { enemy.burstRemaining = enemy.type === 'queen' ? 12 : 8; enemy.burstTimer = 0; enemy.burstAngle = enemy.chargeAngle; }
+          else { enemy.charge = enemy.type === 'queen' ? .7 : .6; effect('charge', enemy.x, enemy.y, .2, enemy.r); }
+        }
         continue;
       }
       if (enemy.charge > 0) {
@@ -390,12 +508,10 @@
       if (enemy.type === 'spitter' && los && d < 8 && d > 2 && enemy.cooldown <= 0) {
         enemyShot(enemy, enemy.angle, 5.2, TYPES.spitter.damage); enemy.cooldown = 1.6 + random() * .5; enemy.attackFlash = .18;
       }
-      if ((enemy.type === 'brute' || enemy.type === 'queen') && los && d > 2.4 && d < 8 && enemy.cooldown <= 0) {
-        enemy.telegraph = enemy.type === 'queen' ? .75 : .65; enemy.chargeAngle = enemy.angle; enemy.cooldown = enemy.type === 'queen' ? 3.5 : 4.5;
+      if ((enemy.type === 'brute' || enemy.type === 'queen') && los && d > 2.4 && d < (enemy.isBoss ? 13 : 8) && enemy.cooldown <= 0) {
+        enemy.attackType = enemy.isBoss ? 'burst' : 'charge';
+        enemy.telegraph = enemy.type === 'queen' ? .85 : .65; enemy.chargeAngle = enemy.angle; enemy.cooldown = enemy.type === 'queen' ? 3.5 : 4.5;
         effect('telegraph', enemy.x, enemy.y, enemy.telegraph, enemy.r + .45, { angle: enemy.chargeAngle, length: Math.min(d, 5) });
-        if (enemy.type === 'queen') {
-          for (let i = -2; i <= 2; i++) enemyShot(enemy, enemy.angle + i * .22, 4, 15);
-        }
         continue;
       }
       if (d < enemy.r + p.r + .16) {
@@ -428,6 +544,7 @@
   }
   function updatePlayer(dt) {
     const p = state.player;
+    p.dashCooldown = Math.max(0, p.dashCooldown - dt); p.abilityCooldown = Math.max(0, p.abilityCooldown - dt);
     p.cooldown = Math.max(0, p.cooldown - dt); p.invulnerable = Math.max(0, p.invulnerable - dt);
     if (p.reload > 0) { p.reload = Math.max(0, p.reload - dt); if (p.reload === 0) completeReload(); }
     let sx = (input.keys.has('KeyD') || input.keys.has('ArrowRight') ? 1 : 0) - (input.keys.has('KeyA') || input.keys.has('ArrowLeft') ? 1 : 0) + input.move.x;
@@ -437,7 +554,8 @@
     let dx = sx + sy * 2, dy = -sx + sy * 2;
     const worldLength = Math.hypot(dx, dy); if (worldLength > 0) { const magnitude = Math.min(1, screenLength); dx = dx / worldLength * magnitude; dy = dy / worldLength * magnitude; }
     p.moving = worldLength > .05;
-    if (p.moving) { W.move(state.level, p, dx * 3.05 * dt, dy * 3.05 * dt); p.anim += dt * 10; }
+    if (p.dashTime > 0) { const dashDt = Math.min(dt, p.dashTime); W.move(state.level, p, p.dashX * 10.5 * dashDt, p.dashY * 10.5 * dashDt); p.dashTime = Math.max(0, p.dashTime - dt); p.anim += dt * 16; }
+    else if (p.moving) { W.move(state.level, p, dx * 3.05 * (1 + p.upgrades.speed * .07) * dt, dy * 3.05 * (1 + p.upgrades.speed * .07) * dt); p.dashX = dx; p.dashY = dy; p.anim += dt * 10; }
     else p.anim += dt * 1.5;
     if (input.touchAim && Math.hypot(input.aim.x, input.aim.y) > .16) {
       let ax = input.aim.x + input.aim.y * 2, ay = -input.aim.x + input.aim.y * 2;
@@ -460,9 +578,10 @@
         for (const candidate of state.enemies.concat(state.nests)) {
           if (candidate.hp <= 0 || dist(p, candidate) > WEAPONS[p.weapon].range || !W.lineOfSight(state.level, p, candidate)) continue;
           const point = R.worldToScreen(candidate.x, candidate.y);
-          const height = candidate.type === 'queen' ? 40 : candidate.type === 'brute' ? 30 : candidate.type ? 22 : 20;
-          const radius = (candidate.type === 'queen' ? 35 : candidate.type === 'brute' ? 27 : 22) * zoom;
-          const distance = Math.min(Math.hypot(state.pointer.x - point.x, state.pointer.y - point.y), Math.hypot(state.pointer.x - point.x, state.pointer.y - point.y + height * zoom));
+          const height = candidate.type === 'queen' ? 70 : candidate.type === 'brute' ? 45 : candidate.type ? 34 : 20;
+          const body = typeof R.actorAimPoint === 'function' ? R.actorAimPoint(candidate) : { x: point.x, y: point.y - height * zoom };
+          const radius = (candidate.type === 'queen' || candidate.isBoss ? 75 : candidate.type === 'brute' ? 40 : 26) * zoom;
+          const distance = Math.min(Math.hypot(state.pointer.x - point.x, state.pointer.y - point.y), Math.hypot(state.pointer.x - body.x, state.pointer.y - body.y));
           if (distance <= radius && distance < closest) { closest = distance; target = candidate; }
         }
         if (target) aim = { x: target.x, y: target.y };
@@ -479,7 +598,8 @@
       if (pickup.kind === 'medkit') {
         if (p.hp >= p.maxHp) continue;
         p.hp = Math.min(p.maxHp, p.hp + 42); toast('Аптечка · +42 здоровья', 2);
-      } else if (pickup.kind === 'credits') { p.cash += pickup.amount || 90; toast('Кредиты · +' + (pickup.amount || 90), 2); }
+      } else if (pickup.kind === 'resource') { const amount = pickup.amount || 1; state.resources = Math.min(999, state.resources + amount); state.resourcesCollected += amount; toast('Энергокристаллы · +' + amount, 2); }
+      else if (pickup.kind === 'credits') { p.cash += pickup.amount || 90; toast('Кредиты · +' + (pickup.amount || 90), 2); }
       else {
         p.ammo.rifle = Math.min(WEAPONS.rifle.reserve, p.ammo.rifle + (pickup.amount || 36));
         if (p.owned.shotgun) p.ammo.shotgun = Math.min(WEAPONS.shotgun.reserve, p.ammo.shotgun + 8);
@@ -502,13 +622,14 @@
   function interact() {
     if (state.mode !== 'playing') return;
     const terminal = state.terminals.find(t => !t.active && dist(t, state.player) < 1.3);
-    if (terminal) { terminal.active = true; effect('terminal', terminal.x, terminal.y, 1, .8); sound('terminal'); toast('Терминал ' + (terminal.label || terminal.id) + ' активирован', 3); updateObjective(); return; }
+    if (terminal) { terminal.active = true; state.generatorActivated = true; effect('terminal', terminal.x, terminal.y, 1, .8); sound('terminal'); toast('Терминал ' + (terminal.label || terminal.id) + ' активирован', 3); updateObjective(); return; }
     if (dist(state.player, state.level.exit) < 1.4) {
       if (state.exitReady) completeLevel(); else toast('Выход заблокирован. Активируйте терминалы и уничтожьте заражённых.', 3);
     }
   }
   function updateObjective() {
-    const ready = state.terminals.every(t => t.active) && state.nests.every(n => n.hp <= 0) && state.enemies.length === 0 && queued.length === 0;
+    updateWave();
+    const ready = state.terminals.every(t => t.active) && state.nests.every(n => n.hp <= 0) && state.enemies.length === 0 && queued.length === 0 && pendingWaves.length === 0;
     if (ready && !state.exitReady) { state.exitReady = true; state.spawnRemaining = 0; toast('СЕКТОР ЗАЧИЩЕН. Выход открыт — следуйте к зелёному маркеру.', 6); sound('terminal'); }
   }
   function completeLevel() {
@@ -624,7 +745,34 @@
     setText('weaponName', spec.name); setText('cash', Math.floor(p.cash).toLocaleString('ru-RU')); setText('kills', state.kills);
     setText('sectorTitle', state.level ? state.level.name : 'ПРОТОКОЛ ЗАРАЖЕНИЯ');
     setText('missionStatus', state.level ? objectiveText() : ''); setText('enemyCount', state.spawnRemaining);
-    setText('grenadesText', p.grenades); setText('grenadeButton', '◉ ' + p.grenades); setText('weaponSwitch', p.weapon === 'rifle' ? 'АВТ' : p.weapon === 'pistol' ? 'ПСТ' : p.weapon === 'shotgun' ? 'ДРБ' : 'ПЛЗ');
+    setText('grenadesText', p.grenades); setText('grenadeTouchCount', p.grenades); setText('weaponSwitch', p.weapon === 'rifle' ? 'АВТ' : p.weapon === 'pistol' ? 'ПСТ' : p.weapon === 'shotgun' ? 'ДРБ' : 'ПЛЗ');
+    setText('playerLevel', p.level); setText('xpText', p.xp + ' / ' + p.xpNeed);
+    if ($('xpFill')) $('xpFill').style.width = clamp(p.xp / p.xpNeed * 100, 0, 100) + '%';
+    setText('waveText', state.wave + '/10');
+    if ($('waveFill')) $('waveFill').style.width = clamp(state.waveProgress * 100, 0, 100) + '%';
+    setText('resourceCount', state.resources);
+    const clearedWaves = Math.min(10, state.wave - 1 + (state.waveEnemiesRemaining === 0 && state.level ? 1 : 0));
+    setText('objWaves', clearedWaves + '/10'); setText('objBosses', state.bossesKilled + '/3');
+    setText('objResources', Math.min(20, state.resourcesCollected) + '/20'); setText('objGenerator', state.generatorActivated ? '1/1' : '0/1');
+    for (const [key, id] of Object.entries({ pistol: 'Pistol', shotgun: 'Shotgun', rifle: 'Rifle', plasma: 'Plasma' })) {
+      setText('weaponAmmo' + id, p.owned[key] ? p.clip[key] + '/' + (key === 'pistol' ? '∞' : p.ammo[key]) : 'ЗАКРЫТО');
+    }
+    for (const button of document.querySelectorAll('[data-upgrade]')) {
+      const key = button.dataset.upgrade, level = p.upgrades[key];
+      if (!Number.isInteger(level)) continue;
+      button.disabled = state.mode !== 'playing' || level >= 6 || p.cash < upgradePrice(key);
+      button.title = level >= 6 ? 'Максимальное улучшение' : 'Улучшение ' + (level + 1) + '/6 · ' + upgradePrice(key) + ' кредитов';
+      button.dataset.level = String(level);
+    }
+    for (const label of document.querySelectorAll('[data-upgrade-level]')) {
+      const level = p.upgrades[label.dataset.upgradeLevel];
+      if (Number.isInteger(level)) { label.textContent = '■'.repeat(level) + '□'.repeat(6 - level); label.setAttribute('aria-label', level + ' из 6'); }
+    }
+    if ($('dashButton')) { $('dashButton').disabled = state.mode !== 'playing' || p.dashCooldown > 0; $('dashButton').title = p.dashCooldown > 0 ? 'Рывок: ' + p.dashCooldown.toFixed(1) + ' с' : 'Рывок · Shift'; }
+    if ($('abilityButton')) { $('abilityButton').disabled = state.mode !== 'playing' || p.abilityCooldown > 0 || state.resources < 5; $('abilityButton').title = p.abilityCooldown > 0 ? 'Импульс: ' + p.abilityCooldown.toFixed(1) + ' с' : 'Электроимпульс · F · 5 кристаллов'; }
+    const boss = state.enemies.find(enemy => enemy.isBoss && enemy.hp > 0 && dist(enemy, p) < 12);
+    if ($('bossBar')) $('bossBar').classList.toggle('hidden', !boss || !['playing', 'paused'].includes(state.mode));
+    if (boss) { setText('bossName', boss.name || 'БОСС'); if ($('bossFill')) $('bossFill').style.width = clamp(boss.hp / boss.maxHp * 100, 0, 100) + '%'; }
     for (const button of document.querySelectorAll('[data-weapon]')) {
       const key = button.dataset.weapon; button.classList.toggle('active', key === p.weapon); button.classList.toggle('locked', !p.owned[key]); button.setAttribute('aria-pressed', String(key === p.weapon)); button.disabled = !p.owned[key];
     }
@@ -655,6 +803,9 @@
   function on(id, event, fn) { const el = $(id); if (el) el.addEventListener(event, fn); }
   on('start', 'click', startNew); on('continue', 'click', continueGame); on('deploy', 'click', deploy);
   on('pauseButton', 'click', togglePause); on('resume', 'click', togglePause); on('quit', 'click', returnMenu); on('endMenu', 'click', returnMenu); on('retry', 'click', retry); on('shopContinue', 'click', shopContinue);
+  on('dashButton', 'click', dashAction); on('abilityButton', 'click', useAbility);
+  for (const key of ['damage', 'speed', 'health', 'crit']) on('upgrade' + key[0].toUpperCase() + key.slice(1), 'click', () => purchaseUpgrade(key));
+  for (const button of document.querySelectorAll('[data-upgrade]')) if (!/^upgrade(?:Damage|Speed|Health|Crit)$/.test(button.id || '')) button.addEventListener('click', () => purchaseUpgrade(button.dataset.upgrade));
   on('reloadButton', 'click', reload); on('grenadeButton', 'click', throwGrenade);
   on('interactButton', 'click', interact); on('weaponSwitch', 'click', () => { if (state.mode === 'playing') cycleWeapon(); });
   for (const button of document.querySelectorAll('[data-weapon]')) button.addEventListener('click', () => { if (state.mode === 'playing') switchWeapon(button.dataset.weapon); });
@@ -670,6 +821,8 @@
     if (e.repeat) return;
     if (e.code === 'KeyR') reload();
     else if (e.code === 'Space' || e.code === 'KeyG') throwGrenade();
+    else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') dashAction();
+    else if (e.code === 'KeyF') useAbility();
     else if (e.code === 'KeyE') interact();
     else if (e.code === 'KeyQ') cycleWeapon();
     else if (/^Digit[1-4]$/.test(e.code)) switchWeapon(['pistol', 'shotgun', 'rifle', 'plasma'][Number(e.code.slice(-1)) - 1]);
@@ -720,11 +873,11 @@
   if (TEST) {
     window.OutbreakDebug = {
       getState: () => state,
-      snapshot: () => ({ mode: state.mode, levelIndex: state.levelIndex, level: state.level.id, player: { x: state.player.x, y: state.player.y, hp: state.player.hp, armor: state.player.armor, weapon: state.player.weapon, ammo: Object.assign({}, state.player.ammo), clip: Object.assign({}, state.player.clip), cash: state.player.cash, owned: Object.assign({}, state.player.owned), grenades: state.player.grenades }, enemies: state.enemies.length, spawnRemaining: state.spawnRemaining, totalEnemies: state.totalEnemies, kills: state.kills, terminalCount: state.terminals.length, activeTerminals: state.terminals.filter(t => t.active).length, livingNests: state.nests.filter(n => n.hp > 0).length, exitReady: state.exitReady, queued: queued.length, bullets: state.bullets.length, time: state.time, audioReady: !!audioContext && audioContext.state === 'running' || !!(window.FrontierV6 && window.FrontierV6.status && window.FrontierV6.status().audioReady), assetsReady: !!(R.status && R.status().assetsReady) }),
-      finishLevel: () => { if (state.mode !== 'playing') return false; for (const t of state.terminals) t.active = true; for (const n of state.nests) { n.hp = 0; n.budget = 0; } queued = []; state.enemies = []; state.spawnRemaining = 0; updateObjective(); state.player.x = state.level.exit.x; state.player.y = state.level.exit.y; interact(); return true; },
-      step: seconds => { if (!Number.isFinite(seconds) || seconds < 0 || seconds > 10) return false; for (let t = 0; t < seconds && state.mode === 'playing'; t += .02) update(Math.min(.02, seconds - t)); return true; },
+      snapshot: () => ({ mode: state.mode, levelIndex: state.levelIndex, level: state.level.id, player: { x: state.player.x, y: state.player.y, hp: state.player.hp, armor: state.player.armor, weapon: state.player.weapon, ammo: Object.assign({}, state.player.ammo), clip: Object.assign({}, state.player.clip), cash: state.player.cash, owned: Object.assign({}, state.player.owned), grenades: state.player.grenades, maxHp: state.player.maxHp, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), dashCooldown: state.player.dashCooldown, abilityCooldown: state.player.abilityCooldown }, maxHp: state.player.maxHp, wave: state.wave, waveProgress: state.waveProgress, waveEnemiesRemaining: state.waveEnemiesRemaining, pendingWaves: pendingWaves.length, bossesKilled: state.bossesKilled, resources: state.resources, resourcesCollected: state.resourcesCollected, generatorActivated: state.generatorActivated, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), enemies: state.enemies.length, spawnRemaining: state.spawnRemaining, totalEnemies: state.totalEnemies, kills: state.kills, terminalCount: state.terminals.length, activeTerminals: state.terminals.filter(t => t.active).length, livingNests: state.nests.filter(n => n.hp > 0).length, exitReady: state.exitReady, queued: queued.length, bullets: state.bullets.length, time: state.time, audioReady: !!audioContext && audioContext.state === 'running' || !!(window.FrontierV6 && window.FrontierV6.status && window.FrontierV6.status().audioReady), assetsReady: !!(R.status && R.status().assetsReady) }),
+      finishLevel: () => { if (state.mode !== 'playing') return false; for (const t of state.terminals) t.active = true; for (const n of state.nests) { n.hp = 0; n.budget = 0; } queued = []; pendingWaves = []; state.wave = state.waveEnd; state.enemies = []; state.spawnRemaining = 0; updateObjective(); state.player.x = state.level.exit.x; state.player.y = state.level.exit.y; interact(); return true; },
+      step: seconds => { if (!Number.isFinite(seconds) || seconds < 0 || seconds > 10) return false; for (let t = 0; t < seconds && state.mode === 'playing'; t += .02) update(Math.min(.02, seconds - t)); updateUI(); return true; },
       teleport: (x, y) => { if (!Number.isFinite(x) || !Number.isFinite(y) || !W.isWalkable(state.level, x, y, state.player.r)) return false; state.player.x = x; state.player.y = y; return true; },
-      damagePlayer, interact, reload, switchWeapon, buy, throwGrenade,
+      damagePlayer, damageEnemy, damageNest, interact, reload, switchWeapon, buy, throwGrenade, purchaseUpgrade, dashAction, useAbility, awardXP,
       fire: () => { if (state.mode === 'playing') fire(); },
       resetSeed: () => { seed = 7102026; }
     };

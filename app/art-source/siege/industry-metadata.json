@@ -1,0 +1,84 @@
+{
+  "atlases": {
+    "industry": {
+      "file": "industry.png",
+      "width": 1536,
+      "height": 1024
+    }
+  },
+  "sprites": {
+    "factory": {
+      "atlas": "industry",
+      "rect": [
+        24,
+        64,
+        508,
+        444
+      ],
+      "anchorX": 0.50394,
+      "anchorY": 0.93694,
+      "displayWidth": 480
+    },
+    "tower": {
+      "atlas": "industry",
+      "rect": [
+        552,
+        0,
+        456,
+        560
+      ],
+      "anchorX": 0.50439,
+      "anchorY": 0.94464,
+      "displayWidth": 270
+    },
+    "container": {
+      "atlas": "industry",
+      "rect": [
+        1024,
+        80,
+        496,
+        476
+      ],
+      "anchorX": 0.49194,
+      "anchorY": 0.92437,
+      "displayWidth": 260
+    },
+    "generator": {
+      "atlas": "industry",
+      "rect": [
+        24,
+        520,
+        512,
+        464
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.94181,
+      "displayWidth": 150
+    },
+    "barrels": {
+      "atlas": "industry",
+      "rect": [
+        544,
+        576,
+        464,
+        408
+      ],
+      "anchorX": 0.48922,
+      "anchorY": 0.92157,
+      "displayWidth": 110
+    },
+    "railing": {
+      "atlas": "industry",
+      "rect": [
+        1024,
+        576,
+        496,
+        408
+      ],
+      "anchorX": 0.49395,
+      "anchorY": 0.92157,
+      "displayWidth": 220
+    }
+  },
+  "notes": "Source regions intentionally use unequal height and transparent gutters after checking actual generated pixels. Draw with source cropping and provided normalized foot anchors. No crop, repaint or rescale was applied to generated PNG."
+}

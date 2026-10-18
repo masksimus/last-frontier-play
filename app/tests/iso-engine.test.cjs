@@ -68,7 +68,7 @@ function boot({ storage = new Map(), search = '?test=1' } = {}) {
   vm.runInContext(engine, context, { filename: 'iso-game.js' });
   const click = id => element(id).handlers.get('click')();
   const start = () => { click('start'); click('deploy'); };
-  return { context, element, click, start, storage, debug: context.OutbreakDebug, windowHandlers };
+  return { context, element, click, start, storage, debug: context.OutbreakDebug, windowHandlers, documentHandlers };
 }
 
 test('combat waits for held left mouse input before spending ammunition', () => {
@@ -157,4 +157,169 @@ test('normal URLs expose no test controls while the production game starts', () 
     game.start();
     assert.equal(game.context.document.body.dataset.mode, 'playing');
   }
+});
+
+test('deployment starts with eight visible threats outside contact range and a safe opening', () => {
+  const game = boot(); game.start();
+  const state = game.debug.getState();
+  const entrance = state.enemies.filter(enemy => {
+    const distance = Math.hypot(enemy.x - state.player.x, enemy.y - state.player.y);
+    return distance > 2.8 && distance <= 5.8 && World.lineOfSight(state.level, state.player, enemy);
+  });
+  assert.ok(entrance.length >= 8, 'the first room contains an immediate, visible fight');
+  const hp = state.player.hp;
+  game.debug.step(1);
+  assert.equal(state.player.hp, hp, 'no unavoidable contact damage during the first second');
+  assert.equal(state.wave, 1);
+});
+
+test('all ten waves spawn finite groups and wait for the current group to clear', () => {
+  const game = boot(); game.start();
+  const seen = [];
+  for (let sector = 0; sector < 3; sector++) {
+    const state = game.debug.getState();
+    state.player.invulnerable = 1000;
+    for (const nest of state.nests) game.debug.damageNest(nest, 100000);
+    const end = [3, 6, 10][sector];
+    while (true) {
+      const wave = state.wave; seen.push(wave);
+      assert.ok(state.enemies.length > 0, 'every wave has actual spawned enemies');
+      game.debug.step(.02);
+      assert.equal(state.wave, wave, 'time alone cannot advance a wave');
+      if (wave === end) assert.ok(state.enemies.some(enemy => enemy.isBoss), 'each sector ends with a real boss');
+      for (const enemy of state.enemies) game.debug.damageEnemy(enemy, 100000);
+      game.debug.step(.02);
+      if (wave === end) break;
+      assert.equal(state.wave, wave + 1);
+    }
+    assert.equal(game.debug.snapshot().pendingWaves, 0);
+    assert.equal(state.waveProgress, 1);
+    if (sector < 2) { game.debug.finishLevel(); game.click('shopContinue'); game.click('deploy'); }
+  }
+  assert.deepEqual(seen, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  assert.equal(game.debug.getState().bossesKilled, 3);
+});
+
+test('combat upgrades spend credits, respect caps and change weapon damage and health', () => {
+  const game = boot();
+  assert.equal(game.debug.purchaseUpgrade('damage'), false, 'menu purchases are rejected');
+  game.start();
+  const p = game.debug.getState().player;
+  p.cash = 180;
+  assert.equal(game.debug.purchaseUpgrade('damage'), true);
+  assert.equal(p.cash, 0); assert.equal(p.upgrades.damage, 1);
+  assert.equal(game.debug.purchaseUpgrade('damage'), false, 'unaffordable purchases have no effect');
+  assert.equal(game.debug.purchaseUpgrade('constructor'), false);
+  p.cash = 10000;
+  for (let i = 1; i < 6; i++) assert.equal(game.debug.purchaseUpgrade('damage'), true);
+  const cappedCash = p.cash;
+  assert.equal(game.debug.purchaseUpgrade('damage'), false);
+  assert.equal(p.upgrades.damage, 6); assert.equal(p.cash, cappedCash);
+  const oldMax = p.maxHp;
+  assert.equal(game.debug.purchaseUpgrade('health'), true);
+  assert.equal(p.maxHp, oldMax + 20);
+  game.debug.fire();
+  assert.ok(game.debug.getState().bullets[0].damage >= 23 * 1.66 - .0001);
+});
+
+test('earned XP raises level, expands health and survives a validated checkpoint', () => {
+  const storage = new Map(), game = boot({ storage }); game.start();
+  const p = game.debug.getState().player;
+  p.hp = 70;
+  game.debug.awardXP(80);
+  assert.equal(p.level, 2); assert.equal(p.xp, 0); assert.equal(p.maxHp, 125); assert.equal(p.hp, 90);
+  p.cash = 1000; game.debug.purchaseUpgrade('health');
+  game.debug.finishLevel();
+  const restored = boot({ storage }); restored.click('continue');
+  const saved = restored.debug.getState().player;
+  assert.equal(saved.level, 2); assert.equal(saved.maxHp, 145); assert.equal(saved.upgrades.health, 1);
+  const corrupted = JSON.parse(storage.get(SAVE_KEY));
+  corrupted.player.upgrades.speed = 99;
+  storage.set(SAVE_KEY, JSON.stringify(corrupted));
+  assert.equal(boot({ storage }).element('continue').disabled, true);
+});
+
+test('dash grants a short dodge but cannot cross a solid wall or bypass its cooldown', () => {
+  const game = boot(); game.start();
+  const state = game.debug.getState(), p = state.player;
+  assert.equal(game.debug.teleport(12.7, 6.5), true);
+  p.angle = 0; p.invulnerable = 0;
+  assert.equal(game.debug.dashAction(), true);
+  const hp = p.hp, armor = p.armor;
+  game.debug.damagePlayer(100);
+  assert.equal(p.hp, hp); assert.equal(p.armor, armor);
+  assert.equal(game.debug.dashAction(), false);
+  game.debug.step(.2);
+  assert.ok(p.x <= 12.781, 'swept body collision stops at the wall');
+  assert.ok(World.isWalkable(state.level, p.x, p.y, p.r));
+  assert.equal(p.dashTime, 0); assert.ok(p.dashCooldown > 3.5);
+});
+
+test('shockwave spends real energy, damages visible enemies and respects wall occlusion', () => {
+  const game = boot(); game.start();
+  const state = game.debug.getState();
+  assert.equal(game.debug.teleport(12.78, 6.78), true);
+  const template = state.enemies[0];
+  const visible = { ...template, id: 991, x: 11.5, y: 6.5, hp: 300, maxHp: 300 };
+  const hidden = { ...template, id: 992, x: 13.55, y: 7.43, hp: 300, maxHp: 300 };
+  assert.equal(World.lineOfSight(state.level, state.player, hidden), false);
+  state.enemies = [visible, hidden]; state.resources = 5;
+  assert.equal(game.debug.useAbility(), true);
+  assert.equal(state.resources, 0); assert.equal(visible.hp, 120); assert.equal(hidden.hp, 300);
+  assert.equal(state.player.abilityCooldown, 8);
+  assert.equal(game.debug.useAbility(), false);
+});
+
+test('legacy checkpoints migrate and resource collection is distinct from spending energy', () => {
+  const storage = new Map(), game = boot({ storage }); game.start();
+  const legacy = JSON.parse(storage.get(SAVE_KEY));
+  for (const key of ['level', 'xp', 'xpNeed', 'upgrades']) delete legacy.player[key];
+  for (const key of ['resources', 'resourcesCollected', 'bossesKilled', 'generatorActivated']) delete legacy[key];
+  storage.set(SAVE_KEY, JSON.stringify(legacy));
+  const migrated = boot({ storage }); migrated.click('continue'); migrated.click('deploy');
+  const state = migrated.debug.getState();
+  assert.equal(state.player.level, 1); assert.equal(state.player.maxHp, 120);
+  state.pickups.push({ x: state.player.x, y: state.player.y, kind: 'resource', amount: 3, age: 0 });
+  migrated.debug.step(.02);
+  assert.equal(state.resources, 8); assert.equal(state.resourcesCollected, 3);
+  migrated.debug.useAbility();
+  assert.equal(state.resources, 3); assert.equal(state.resourcesCollected, 3);
+});
+
+test('boss minigun waits for its visible warning before firing actual projectiles', () => {
+  const game = boot(); game.start();
+  const state = game.debug.getState();
+  for (const nest of state.nests) game.debug.damageNest(nest, 100000);
+  while (state.wave < 3) {
+    for (const enemy of state.enemies) game.debug.damageEnemy(enemy, 100000);
+    game.debug.step(.02);
+  }
+  const boss = state.enemies.find(enemy => enemy.isBoss);
+  assert.ok(boss.maxHp >= 800);
+  state.enemies = [boss]; state.enemyBullets = [];
+  boss.x = 8.5; boss.y = 6.5; boss.cooldown = 0; boss.alerted = true;
+  state.player.invulnerable = 1000;
+  game.debug.step(.02);
+  assert.ok(boss.telegraph > .6); assert.equal(state.enemyBullets.length, 0);
+  game.debug.step(.74);
+  assert.ok(state.enemyBullets.some(bullet => bullet.kind === 'fire' && bullet.damage > 0));
+});
+
+test('speed and critical upgrades improve movement and actual shot outcomes', () => {
+  const normal = boot(), upgraded = boot(); normal.start(); upgraded.start();
+  const fast = upgraded.debug.getState().player; fast.cash = 10000;
+  for (let i = 0; i < 6; i++) { upgraded.debug.purchaseUpgrade('speed'); upgraded.debug.purchaseUpgrade('crit'); }
+  for (const game of [normal, upgraded]) {
+    game.debug.getState().player.invulnerable = 1000;
+    game.documentHandlers.get('keydown')({ code: 'KeyD', target: { tagName: 'BODY' }, repeat: false, preventDefault() {} });
+    game.debug.step(.5);
+  }
+  const moved = game => Math.hypot(game.debug.getState().player.x - 4.5, game.debug.getState().player.y - 6.5);
+  assert.ok(moved(upgraded) > moved(normal) * 1.3);
+  function criticalShots(game) {
+    game.debug.resetSeed(); const s = game.debug.getState(); s.bullets = [];
+    for (let i = 0; i < 100; i++) { s.player.cooldown = 0; s.player.clip.rifle = 30; game.debug.fire(); }
+    return s.bullets.filter(bullet => bullet.damage > 23.1).length;
+  }
+  assert.ok(criticalShots(upgraded) > criticalShots(normal) + 10, 'critical perk produces more amplified hits');
 });

@@ -1,0 +1,73 @@
+{
+  "file": "actors.png",
+  "width": 1536,
+  "height": 1024,
+  "sprites": {
+    "marineRight": {
+      "rect": [
+        80,
+        36,
+        420,
+        466
+      ],
+      "anchorX": 0.43,
+      "anchorY": 0.96,
+      "displayWidth": 120
+    },
+    "marineLeft": {
+      "rect": [
+        540,
+        36,
+        420,
+        458
+      ],
+      "anchorX": 0.57,
+      "anchorY": 0.96,
+      "displayWidth": 120
+    },
+    "crawler": {
+      "rect": [
+        1046,
+        22,
+        458,
+        486
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.96,
+      "displayWidth": 120
+    },
+    "brute": {
+      "rect": [
+        28,
+        525,
+        466,
+        465
+      ],
+      "anchorX": 0.53,
+      "anchorY": 0.96,
+      "displayWidth": 180
+    },
+    "queen": {
+      "rect": [
+        500,
+        497,
+        566,
+        501
+      ],
+      "anchorX": 0.57,
+      "anchorY": 0.96,
+      "displayWidth": 330
+    },
+    "drone": {
+      "rect": [
+        1080,
+        590,
+        432,
+        344
+      ],
+      "anchorX": 0.5,
+      "anchorY": 0.88,
+      "displayWidth": 125
+    }
+  }
+}
