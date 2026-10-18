@@ -24,14 +24,14 @@ def build(root: Path = ROOT) -> dict:
     html = (root / 'index.html').read_text(encoding='utf-8')
     # Pixi's optional enhancement needs npm bundles. Canvas is the fully local
     # renderer; do not ship a module with unresolved browser package imports.
-    html = re.sub(r'<script\b[^>]*\bsrc=["\'](?:\./)?src/pixi-layer\.mjs["\'][^>]*>\s*</script>',
+    html = re.sub(r'<script\b[^>]*\bsrc=["\'](?:\./)?src/(?:pixi-layer|outbreak-pixi)\.mjs["\'][^>]*>\s*</script>',
                   '', html, flags=re.IGNORECASE)
     (dist / 'index.html').write_text(html, encoding='utf-8')
     copy2(root / 'styles.css', dist / 'styles.css')
     copy_game_assets(root, dist)
     (dist / 'src').mkdir()
     for source in sorted((root / 'src').iterdir()):
-        if source.is_file() and source.suffix in ('.js', '.mjs') and source.name != 'pixi-layer.mjs':
+        if source.is_file() and source.suffix in ('.js', '.mjs') and source.name not in ('pixi-layer.mjs', 'outbreak-pixi.mjs'):
             copy2(source, dist / 'src' / source.name)
     version = json.loads((root / 'package.json').read_text(encoding='utf-8'))['version']
     return package_distribution(dist, root / ARCHIVE_NAME, 'canvas', version, root)

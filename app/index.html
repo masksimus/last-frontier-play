@@ -3,69 +3,58 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1116">
-<title>Последний рубеж — Операция «Заря»</title>
-<meta name="description" content="Тактический sci-fi экшен: три сектора, десять волн машин и четыре вида оружия. Верни связь и останови восстание.">
+<meta name="theme-color" content="#171812">
+<title>Последний рубеж — Протокол заражения</title>
+<meta name="description" content="Изометрический экшен в заражённом комплексе. Три уровня, орды мутантов, четыре вида оружия и ручная стрельба.">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div id="game" aria-label="Игровая арена Последний рубеж">
- <canvas id="stage" aria-label="Поле боя. Двигайтесь клавишами WASD или стрелками, стрельба автоматическая."></canvas>
- <div id="hud" class="hidden">
-  <div id="topline">
-   <div class="insignia"><span class="brandMark" aria-hidden="true">╱╱</span> ПОСЛЕДНИЙ <b>РУБЕЖ</b><small>ОПЕРАЦИЯ «ЗАРЯ»</small></div>
-   <div class="battleTop"><div id="waveTag">ВОЛНА <strong id="wave">01</strong><span> / 10</span></div><button id="pauseButton" class="smallBtn" aria-label="Пауза, Escape" title="Пауза · Esc">Ⅱ</button></div>
+<main id="game" aria-label="Последний рубеж: Протокол заражения">
+ <canvas id="stage" aria-label="Изометрическое поле боя. WASD — движение, мышь — прицел, левая кнопка — огонь."></canvas>
+ <div id="hud" class="hidden" aria-label="Состояние бойца">
+  <div class="combatTop">
+   <div class="location"><span class="tinyLabel">КОМПЛЕКС 09 / КАРАНТИН</span><strong id="sectorTitle">01 / ЗОНА ПРИЁМКИ</strong><span id="missionStatus">Найдите распределительный щит.</span></div>
+   <div class="combatTopRight"><span class="hostiles"><i aria-hidden="true"></i>ЦЕЛЕЙ <b id="enemyCount">0</b></span><button id="pauseButton" class="iconButton" title="Пауза · Esc" aria-label="Приостановить игру">Ⅱ</button></div>
   </div>
-  <div id="bars">
-   <div class="barlabel"><span>ЦЕЛОСТНОСТЬ БРОНИ <strong id="hpText">100 / 100</strong></span><div class="bar"><i id="hpFill"></i></div></div>
-   <div class="barlabel"><span>БОЕВОЙ ОПЫТ <strong id="levelText">УР. 1</strong></span><div class="bar exp"><i id="xpFill"></i></div></div>
+  <div class="radarPanel"><canvas id="radar" width="168" height="112" aria-label="План комплекса"></canvas><span>ДАТЧИК ДВИЖЕНИЯ <i aria-hidden="true"></i></span></div>
+  <div class="combatBottom">
+   <div class="vitals"><div class="healthRow"><span class="healthCross" aria-hidden="true">✚</span><strong id="hpText">100</strong><span class="armor"><span aria-hidden="true">⬡</span> <b id="armorText">0</b></span></div><div class="healthTrack"><i id="hpFill"></i></div><div class="resources"><span>КРЕДИТЫ <b id="cash">0</b></span><span>УБИТО <b id="kills">0</b></span></div></div>
+   <div class="weaponPanel"><div class="activeWeapon"><span id="weaponName">ПИСТОЛЕТ</span><strong id="ammoText">12 / ∞</strong><small>R <span>ПЕРЕЗАРЯДКА</span></small></div><div class="weaponSlots" aria-label="Выбор оружия">
+    <button class="weaponSlot active" data-weapon="pistol" aria-label="Пистолет, клавиша 1" aria-pressed="true"><kbd>1</kbd><svg viewBox="0 0 72 32" aria-hidden="true"><path d="M13 7h43v10H34l-4 13H18l4-13h-9z"/><path d="M56 9h7v6h-7M31 17v7h8l3-7" fill="none"/></svg><span>ПИСТОЛЕТ</span></button>
+    <button class="weaponSlot" data-weapon="shotgun" aria-label="Дробовик, клавиша 2" aria-pressed="false"><kbd>2</kbd><svg viewBox="0 0 72 32" aria-hidden="true"><path d="M5 12h51v7H30l-9 10H9l7-10H5z"/><path d="M30 21h15v4H28M56 13h12v4H56" fill="none"/></svg><span>ДРОБОВИК</span></button>
+    <button class="weaponSlot" data-weapon="rifle" aria-label="Автомат, клавиша 3" aria-pressed="false"><kbd>3</kbd><svg viewBox="0 0 72 32" aria-hidden="true"><path d="M4 12h49v7H36l5 10H31l-5-10h-5l-4 10H8l5-10H4z"/><path d="M53 14h16v3H53M40 9h12M16 8h10" fill="none"/></svg><span>АВТОМАТ</span></button>
+    <button class="weaponSlot" data-weapon="plasma" aria-label="Плазмомёт, клавиша 4" aria-pressed="false"><kbd>4</kbd><svg viewBox="0 0 72 32" aria-hidden="true"><path d="M9 10h10V7h31l8 6h8v7h-9l-7 5H28l-6 6H12l6-11H9z"/><path d="M30 12v8m7-8v8m7-8v8" fill="none" class="weaponCuts"/></svg><span>ПЛАЗМА</span></button>
+   </div></div>
+   <div class="grenadeReadout"><span aria-hidden="true">◉</span><strong id="grenadesText">3</strong><small>G / ПРОБЕЛ</small></div>
   </div>
-  <div id="stats"><span title="Уничтожено">ЦЕЛИ <strong id="kills">0</strong></span><span title="Очки">ОЧКИ <strong id="score">0</strong></span><span title="Время операции">ВРЕМЯ <strong id="clock">0:00</strong></span><span id="weaponName">ШТУРМОВАЯ ВИНТОВКА</span></div>
-  <div id="missionPanel"><div class="missionLead"><span class="statusDot"></span> ТЕКУЩАЯ ЗАДАЧА</div><div class="missionTitle" id="sectorTitle">01 / ПЕРИМЕТР</div><div class="missionLine" id="missionStatus">Восстановите связь с ретрансляторами.</div><div class="objectiveProgress">РЕЛЕ В СЕТИ <strong id="objectiveCount">0 / 2</strong></div></div>
-  <div id="bossBar" hidden><div id="bossLabel">КОМАНДИР РОЯ</div><div class="bar"><i id="bossFill"></i></div></div>
-  <div id="waveTicker">ДО КОНЦА ВОЛНЫ <b id="waveCountdown">28</b> С</div>
-  <div class="radarPanel"><div class="radarLabel"><span class="statusDot"></span> ТАКТИЧЕСКАЯ КАРТА <span>LIVE</span></div><canvas id="radar" width="180" height="120" aria-label="Карта сектора с положением бойца, противников и реле"></canvas></div>
-  <div class="weaponTray" aria-label="Выбор оружия"><div class="trayLabel">АРСЕНАЛ <span>1–4 / Q</span></div><div class="weaponSlots">
-   <button class="weaponSlot active" data-weapon="rifle" aria-label="Штурмовая винтовка, клавиша 1" aria-pressed="true"><kbd>1</kbd><span class="weaponIcon" aria-hidden="true">━╋━</span><span>ВИНТОВКА</span></button>
-   <button class="weaponSlot" data-weapon="shotgun" aria-label="Дробовик, клавиша 2" aria-pressed="false"><kbd>2</kbd><span class="weaponIcon" aria-hidden="true">═╪═</span><span>ДРОБОВИК</span></button>
-   <button class="weaponSlot" data-weapon="railgun" aria-label="Рельсотрон, клавиша 3" aria-pressed="false"><kbd>3</kbd><span class="weaponIcon" aria-hidden="true">─╫──</span><span>РЕЛЬСОТРОН</span></button>
-   <button class="weaponSlot" data-weapon="plasma" aria-label="Плазменная пушка, клавиша 4" aria-pressed="false"><kbd>4</kbd><span class="weaponIcon" aria-hidden="true">╺◈╸</span><span>ПЛАЗМА</span></button>
-  </div></div>
+  <div id="interactHint" class="interactHint hidden"><kbd>E</kbd><span>ВЗАИМОДЕЙСТВОВАТЬ</span></div>
  </div>
- <div id="controls" class="hidden"><div id="stickZone" aria-label="Виртуальный джойстик"><div class="ring"><div id="stickKnob"></div></div><span>ДВИЖЕНИЕ</span></div><button id="weaponSwitch" aria-label="Сменить оружие"><b aria-hidden="true">⌁</b><span id="weaponSwitchText">АВТО</span></button><button id="dash" aria-label="Рывок"><b aria-hidden="true">↗</b><span id="dashText">РЫВОК</span></button></div>
- <div class="overlay" id="home">
-  <div class="vignette"></div>
-  <div class="menuWrap">
-   <div class="menuHeader"><span class="eyebrow"><span class="statusDot"></span> ШТАБ СОПРОТИВЛЕНИЯ / СВЯЗЬ ВОССТАНОВЛЕНА</span><span class="protocol">ОПЕРАЦИЯ «ЗАРЯ»</span></div>
-   <div class="menuMain">
-    <div class="menuCopy">
-     <div class="overline">ТАКТИЧЕСКИЙ ЭКШЕН / ОДИНОЧНАЯ КАМПАНИЯ</div>
-     <h1 class="heroTitle">ПОСЛЕДНИЙ<br><em>РУБЕЖ</em><span class="titleRule"></span></h1>
-     <div class="subtitle">ОПЕРАЦИЯ «ЗАРЯ»</div>
-     <p>Город замолчал. Машины удерживают сеть.<br>Пройди три сектора, запусти реле и передай сигнал, пока последний рубеж ещё стоит.</p>
-     <div class="featureRow"><span><b>03</b> СЕКТОРА</span><span><b>10</b> ВОЛН</span><span><b>04</b> ОРУЖИЯ</span></div>
-     <div class="deploymentSettings"><label for="difficulty">СЛОЖНОСТЬ ОПЕРАЦИИ</label><select id="difficulty"><option value="story">Сюжетная — изучить мир</option><option value="standard" selected>Боевая — стандарт</option><option value="veteran">Ветеран — полный натиск</option></select></div>
-     <button id="continue" class="secondary hidden" disabled>ПРОДОЛЖИТЬ КАМПАНИЮ <b>↗</b></button>
-     <button id="start" class="primary">НАЧАТЬ ОПЕРАЦИЮ <b>↗</b></button>
-     <div class="menuMeta"><span id="bestHome">ЛУЧШИЙ РЕЗУЛЬТАТ: 0</span><span>АВТООГОНЬ ВКЛЮЧЁН</span></div>
-    </div>
-    <div class="operationCard">
-     <div class="operationCardHead"><span>БОЕВОЙ БРИФИНГ</span><span class="classified">ДОПУСК 09</span></div>
-     <div class="heroVisual" aria-hidden="true"><div class="targetRing ringOne"></div><div class="targetRing ringTwo"></div><div class="visualCross crossOne">+</div><div class="visualCross crossTwo">+</div><div class="visualCoordinates">56° 21′ N<br>37° 09′ E</div><div class="heroBadge"><img src="assets/player.svg" alt=""></div><div class="heroIdentifier"><span>ПОЗЫВНОЙ</span><strong>РУБЕЖ–01</strong><small>БОЕВАЯ СИСТЕМА АКТИВНА</small></div><span class="visualAnnotation">КОНТУР ЗАЩИТЫ / ONLINE</span></div>
-     <div class="sectorList"><div><span class="sectorNumber">01</span><div><strong>ПЕРИМЕТР</strong><small>Вернуть питание. Найти путь в город.</small></div><span class="sectorCode">A–07</span></div><div><span class="sectorNumber">02</span><div><strong>ЛИТЕЙНЫЙ ЦЕХ</strong><small>Пробиться к узлам машинной сети.</small></div><span class="sectorCode">F–12</span></div><div><span class="sectorNumber">03</span><div><strong>УЗЕЛ «ЗАРЯ»</strong><small>Запустить сигнал. Завершить операцию.</small></div><span class="sectorCode">Z–01</span></div></div>
-    </div>
-   </div>
-   <div class="menuFooter"><div class="keyboardHelp"><span><kbd>WASD</kbd> / <kbd>↑↓←→</kbd> движение</span><span><kbd>ПРОБЕЛ</kbd> рывок</span><span><kbd>Q</kbd> / <kbd>1–4</kbd> оружие</span><span><kbd>ESC</kbd> пауза</span></div><div class="mobileHelp">НА ТЕЛЕФОНЕ: ДЖОЙСТИК, СМЕНА ОРУЖИЯ И РЫВОК. СТРЕЛЬБА АВТОМАТИЧЕСКАЯ.</div><details class="settings"><summary>НАСТРОЙКИ</summary><div class="settingsBody"><label><input type="checkbox" id="motionToggle"> Меньше вспышек и тряски</label><button id="fullscreen" class="secondary">ПОЛНЫЙ ЭКРАН ↗</button></div></details></div>
-  </div>
+ <div id="touchControls" class="hidden" aria-label="Сенсорное управление">
+  <div id="moveStick" class="touchStick" role="group" aria-label="Джойстик движения"><span class="stickCross" aria-hidden="true"></span><div id="moveKnob" class="stickKnob"></div><span class="stickLabel">ДВИЖЕНИЕ</span></div>
+  <div class="touchActions"><button id="reloadButton" class="touchAction" aria-label="Перезарядить оружие"><b aria-hidden="true">↻</b><span>ЗАРЯД</span></button><button id="grenadeButton" class="touchAction grenadeAction" aria-label="Бросить гранату"><b aria-hidden="true">◉</b><span>ГРАНАТА</span></button><button id="interactButton" class="touchAction" aria-label="Взаимодействовать"><b aria-hidden="true">E</b><span>ДЕЙСТВИЕ</span></button><button id="weaponSwitch" class="touchAction switchAction" aria-label="Сменить оружие"><b aria-hidden="true">⇄</b><span>ОРУЖИЕ</span></button></div>
+  <div id="aimStick" class="touchStick aimStick" role="group" aria-label="Джойстик прицела и стрельбы"><span class="aimCross" aria-hidden="true"></span><div id="aimKnob" class="stickKnob"></div><span class="stickLabel">ПРИЦЕЛ / ОГОНЬ</span></div>
  </div>
- <div class="overlay hidden" id="briefing"><div class="modal briefingModal"><div class="eyebrow"><span class="statusDot"></span> КАНАЛ КОМАНДОВАНИЯ</div><div class="briefingIcon" aria-hidden="true">⌖</div><h2 id="sectorBriefTitle">СЕКТОР 01 / ПЕРИМЕТР</h2><p id="sectorBriefText">Восстанови реле связи и удержи периметр. Подойди к узлу, чтобы запустить передачу.</p><div id="sectorBriefMeta" class="briefingMeta">2 РЕЛЕ · ВОЛНЫ 1–3</div><button id="deploy" class="primary">ВЫДВИГАЕМСЯ <b>↗</b></button><small class="briefingHint">СТРЕЛЬБА АВТОМАТИЧЕСКАЯ. ДЕРЖИСЬ В ДВИЖЕНИИ.</small></div></div>
- <div class="overlay hidden" id="upgrade"><div class="upgradeWrap"><div class="eyebrow">ПОЛЕВАЯ МОДЕРНИЗАЦИЯ / НОВЫЙ УРОВЕНЬ</div><h2>ВЫБЕРИ УСИЛЕНИЕ</h2><p>Один модуль. Больше шансов вернуться.</p><div id="cards"></div><div class="upgradeHint">БОЙ ПРИОСТАНОВЛЕН НА ВРЕМЯ ВЫБОРА</div></div></div>
- <div class="overlay hidden" id="paused"><div class="modal"><div class="eyebrow">ПРОТОКОЛ ОЖИДАНИЯ</div><h2>ПАУЗА</h2><p>Перегруппируйся. Рубеж ждёт.</p><button id="resume" class="primary">ПРОДОЛЖИТЬ <b>↗</b></button><button id="quit" class="secondary">В ГЛАВНОЕ МЕНЮ</button><div class="modalHint">WASD / СТРЕЛКИ · ПРОБЕЛ · Q / 1–4 · ESC</div></div></div>
- <div class="overlay hidden" id="end"><div class="modal"><div class="eyebrow" id="endOverline">ОПЕРАЦИЯ ЗАВЕРШЕНА</div><h2 id="endTitle">РУБЕЖ ПАЛ</h2><p id="endDescription"></p><div id="endSector" class="briefingMeta">СЕКТОР 01 / ПЕРИМЕТР</div><div class="endNumbers"><div><strong id="endWave">1</strong><small>ВОЛНА</small></div><div><strong id="endKills">0</strong><small>УНИЧТОЖЕНО</small></div><div><strong id="endScore">0</strong><small>ОЧКИ</small></div></div><button id="retry" class="primary">НОВАЯ ПОПЫТКА <b>↗</b></button><button id="endMenu" class="secondary">В МЕНЮ</button></div></div>
- <div id="v2Brand">ШТАБ СОПРОТИВЛЕНИЯ <span>ОПЕРАЦИЯ «ЗАРЯ»</span></div><div id="toast" class="hidden" role="status" aria-live="polite"></div>
- <button id="mute" aria-label="Включить или выключить звук" title="Звук">♫</button>
-</div>
-<script type="module" src="./src/pixi-layer.mjs"></script><script src="src/core.js"></script><script src="src/animation.js"></script><script src="src/combat-v8.js"></script><script src="src/campaign.js"></script><script src="src/game.js"></script>
+ <section class="overlay homeOverlay" id="home" aria-label="Главное меню">
+  <div class="homeShade" aria-hidden="true"></div>
+  <div class="menuShell">
+   <div class="menuTop"><span class="quarantineMark"><i aria-hidden="true"></i> ЗОНА КАРАНТИНА</span><span class="serial">ОБЪЕКТ 09—С / 23:47</span></div>
+   <div class="menuContent"><p class="overline">ИЗОМЕТРИЧЕСКИЙ ЭКШЕН / ОДИНОЧНАЯ КАМПАНИЯ</p><h1>ПОСЛЕДНИЙ<br><em>РУБЕЖ</em></h1><div class="subtitle"><span aria-hidden="true">///</span> ПРОТОКОЛ ЗАРАЖЕНИЯ</div><p class="intro">Связь с комплексом оборвалась 6 часов назад.<br>Теперь коридоры полны мутантов.<br>Зачисти лаборатории. Останови заражение.</p><div class="menuFacts"><span>03 <small>УРОВНЯ</small></span><span>04 <small>ОРУЖИЯ</small></span><span>∞ <small>ПОВОДОВ СТРЕЛЯТЬ</small></span></div><div class="deployment"><label for="difficulty">СЛОЖНОСТЬ</label><select id="difficulty"><option value="story">Новобранец</option><option value="standard" selected>Боец</option><option value="veteran">Ветеран</option></select></div><button id="continue" class="secondary hidden" disabled>ПРОДОЛЖИТЬ <span aria-hidden="true">→</span></button><button id="start" class="primary">НАЧАТЬ ЗАЧИСТКУ <span aria-hidden="true">→</span></button><p class="saveNote">Прогресс сохраняется между уровнями.</p></div>
+   <div class="menuBottom"><div class="keyboardHelp"><span><kbd>WASD</kbd> ДВИЖЕНИЕ</span><span><kbd>МЫШЬ</kbd> ПРИЦЕЛ / ОГОНЬ</span><span><kbd>R</kbd> ЗАРЯД</span><span><kbd>G</kbd> ГРАНАТА</span><span><kbd>E</kbd> ДЕЙСТВИЕ</span></div><p class="mobileHelp">Левый джойстик — движение.<br>Правый — прицел и огонь.</p><div class="menuUtilities"><button id="mute" class="utilityButton" aria-label="Включить или выключить звук" title="Звук">ЗВУК <span aria-hidden="true">◖))</span></button><button id="fullscreen" class="utilityButton" aria-label="Полный экран" title="Полный экран">ЭКРАН <span aria-hidden="true">⛶</span></button><details class="settings"><summary>НАСТРОЙКИ</summary><label><input id="motionToggle" type="checkbox"> Меньше вспышек и тряски</label></details></div><p class="credits">Оригинальный мир и материалы · Открытые библиотеки: PixiJS / Howler.js</p></div>
+  </div>
+  <div class="sceneCaption" aria-hidden="true"><span class="captionLine"></span><strong>НИКТО НЕ ОТВЕТИЛ.</strong><small>ПРИДЁТСЯ ПРОВЕРИТЬ ЛИЧНО.</small></div>
+ </section>
+ <section class="overlay modalOverlay hidden" id="briefing" aria-label="Задание уровня"><div class="modal"><p class="overline">ВХОДЯЩАЯ ПЕРЕДАЧА / ОБЪЕКТ 09—С</p><span class="modalSymbol" aria-hidden="true">⌖</span><h2 id="sectorBriefTitle">ЗОНА ПРИЁМКИ</h2><p id="sectorBriefText">Пробейся через заражённый комплекс и найди путь к лаборатории.</p><button id="deploy" class="primary">ВОЙТИ В КОМПЛЕКС <span aria-hidden="true">→</span></button><small class="modalHint">ПРОВЕРЯЙ УГЛЫ. СЧИТАЙ ПАТРОНЫ.</small></div></section>
+ <section class="overlay modalOverlay hidden" id="paused" aria-label="Игра приостановлена"><div class="modal"><p class="overline">ПРОТОКОЛ ОЖИДАНИЯ</p><h2>ПАУЗА</h2><p>Перезарядись. За дверью тебя уже ждут.</p><button id="resume" class="primary">ПРОДОЛЖИТЬ <span aria-hidden="true">→</span></button><button id="quit" class="secondary">В ГЛАВНОЕ МЕНЮ</button><small class="modalHint">ESC — ВЕРНУТЬСЯ В БОЙ</small></div></section>
+ <section class="overlay modalOverlay hidden" id="shop" aria-label="Терминал снабжения"><div class="shopModal"><div class="shopHeader"><div><p class="overline">АВТОНОМНЫЙ ТЕРМИНАЛ / СНАБЖЕНИЕ</p><h2>ПОПОЛНИ ЗАПАСЫ</h2></div><div class="shopBalance"><span>КРЕДИТЫ</span><strong id="shopCash">0</strong></div></div><p class="shopIntro">Патроны, броня и новое оружие. Следующий сектор будет тяжелее.</p><div id="shopItems" class="shopItems"></div><button id="shopContinue" class="primary">ДАЛЬШЕ В КОМПЛЕКС <span aria-hidden="true">→</span></button></div></section>
+ <section class="overlay modalOverlay hidden" id="end" aria-label="Результат операции"><div class="modal endModal"><p class="overline">ПРОТОКОЛ ЗАРАЖЕНИЯ / ИТОГ</p><h2 id="endTitle">СИГНАЛ ПОТЕРЯН</h2><p id="endDescription">Комплекс не отпускает так просто.</p><div class="endNumbers"><div><strong id="endKills">0</strong><span>УНИЧТОЖЕНО</span></div><div><strong id="endScore">0</strong><span>ОЧКИ</span></div></div><button id="retry" class="primary">ЕЩЁ ОДНА ПОПЫТКА <span aria-hidden="true">→</span></button><button id="endMenu" class="secondary">В ГЛАВНОЕ МЕНЮ</button></div></section>
+ <div id="toast" class="hidden" role="status" aria-live="polite"></div>
+ <div class="screenEdge" aria-hidden="true"></div>
+</main>
+<script type="module" src="./src/outbreak-pixi.mjs"></script>
+<script src="src/iso-world.js"></script>
+<script src="assets/outbreak/metadata.js"></script>
+<script src="src/iso-renderer.js"></script>
+<script src="src/iso-game.js"></script>
 </body>
 </html>
