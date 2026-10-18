@@ -80,11 +80,14 @@ if __name__ == "__main__":
         Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True).start()
         url = f"http://127.0.0.1:{server.server_port}/"
         with sync_playwright() as pw:
+            managed_path = pw.chromium.executable_path
+            executable_path = (os.environ.get("FRONTIER_CHROMIUM")
+                               or (managed_path if Path(managed_path).is_file() else None)
+                               or shutil.which("chromium") or shutil.which("google-chrome"))
             browser = pw.chromium.launch(
-                executable_path=(os.environ.get("FRONTIER_CHROMIUM") or shutil.which("chromium")
-                                 or shutil.which("google-chrome") or pw.chromium.executable_path),
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage"], timeout=8000)
+                executable_path=executable_path, headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage", "--enable-unsafe-swiftshader"],
+                timeout=15000)
             for profile, width, height, mobile in PROFILES:
                 require(time.monotonic() - STARTED < 42, "Browser smoke budget exhausted")
                 item = {"profile": profile, "viewport": [width, height], "passed": False,
@@ -119,6 +122,10 @@ if __name__ == "__main__":
                         return s.animatedSpritesReady && s.terrainReady && s.fxAssetsLoaded; }""",
                         timeout=6000)
                     item["checks"].append("original character atlases, terrain and effects loaded")
+                    if os.environ.get("FRONTIER_REQUIRE_PIXI") == "1":
+                        page.wait_for_function(
+                            "window.__FRONTIER_QA__.get().pixiStatus?.ready === true", timeout=6000)
+                        item["checks"].append("PixiJS WebGL renderer ready")
                     page.locator("#deploy").click()
                     mode(page, "running")
                     require(page.locator("#hud").is_visible(), "HUD missing during combat")
