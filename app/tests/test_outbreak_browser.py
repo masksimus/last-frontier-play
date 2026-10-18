@@ -205,7 +205,8 @@ def teleport(page, x, y):
     # actual renderer projection rather than a guessed screen offset.
     page.wait_for_function("""() => { const s=OutbreakDebug.getState();
         const p=OutbreakRenderer.worldToScreen(s.player.x,s.player.y);
-        return Math.abs(p.x-innerWidth*.5)<4 && Math.abs(p.y-innerHeight*(innerWidth<600?.42:.48))<4; }""",
+        const a=OutbreakRenderer.status().viewportAnchor;
+        return Math.abs(p.x-a.x)<4 && Math.abs(p.y-a.y)<4; }""",
         timeout=3500)
 
 
@@ -290,7 +291,7 @@ def verify_reference_battle(page, item, mobile=False):
         if(!boss)throw Error('Final wave has no production boss');
         const ordinary=s.enemies.filter(e=>e!==boss).slice(0,8);
         if(ordinary.length<8)throw Error('Final wave lacks a visible horde');
-        const poses=[[5.3,12.0],[8.8,11.6],[10.4,8.4],[7.0,6.8],
+        const poses=[[5.3,11.3],[8.8,11.6],[10.4,8.4],[7.0,6.8],
                      [10.5,5.2],[5.0,8.0],[12.8,9.4],[4.3,6.3]];
         s.player.x=6.3;s.player.y=10.2;s.player.invulnerable=1e6;
         s.player.cooldown=0;s.player.reload=0;s.player.clip.rifle=30;
