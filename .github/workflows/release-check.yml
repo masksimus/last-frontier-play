@@ -59,7 +59,7 @@ jobs:
           python-version: '3.12'
       - name: Install renderer and audio libraries
         working-directory: app
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Build and verify enhanced game archive
         working-directory: app
         run: |
