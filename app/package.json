@@ -1,11 +1,15 @@
 {
-  "name": "last-frontier-v6",
-  "version": "6.0.0",
+  "name": "last-frontier-campaign",
+  "version": "12.0.0-rc.1",
   "private": true,
   "scripts": {
-    "build": "vite build && python3 scripts/package_dist.py",
-    "test": "node --test tests/*.test.cjs",
-    "verify": "npm run test && npm run build"
+    "build": "python3 scripts/build_release.py",
+    "build:vite": "vite build && python3 scripts/package_vite.py",
+    "test": "node --test --test-isolation=none tests/*.test.cjs",
+    "test:release": "python3 -m unittest discover -s tests -p 'test_release.py' -v",
+    "verify": "npm run test && npm run test:release && npm run build && npm run verify:dist",
+    "verify:dist": "python3 scripts/package_dist.py --verify-only",
+    "preview": "python3 -m http.server 4173 --bind 0.0.0.0 --directory dist"
   },
   "dependencies": {
     "pixi.js": "^8.22.0",

@@ -1,0 +1,6 @@
+app/dist/
+app/*.zip
+app/node_modules/
+app/browser-*-evidence/
+__pycache__/
+*.pyc
