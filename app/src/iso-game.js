@@ -45,9 +45,48 @@
   let levelStartInventory = null;
   let state;
   function random() { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) / 4294967296; }
+  function resetMotion(actor) {
+    Object.assign(actor, { vx: 0, vy: 0, driveVX: 0, driveVY: 0, impulseVX: 0, impulseVY: 0, moveSpeed: 0, moving: false, recoil: 0, hitReact: 0, attackSwing: 0, throwTime: 0, anim: 0 });
+  }
+  function agePose(actor, dt) {
+    actor.recoil = Math.max(0, (actor.recoil || 0) - dt * 7);
+    actor.hitReact = Math.max(0, (actor.hitReact || 0) - dt * 5);
+    actor.attackSwing = Math.max(0, (actor.attackSwing || 0) - dt * 4);
+    actor.throwTime = Math.max(0, (actor.throwTime || 0) - dt);
+  }
+  function finishMotion(actor, x, y, dt) {
+    actor.vx = dt > 0 ? (actor.x - x) / dt : 0; actor.vy = dt > 0 ? (actor.y - y) / dt : 0;
+    actor.moveSpeed = Math.hypot(actor.vx, actor.vy); actor.moving = actor.moveSpeed > .06;
+    actor.anim = (actor.anim || 0) + Math.hypot(actor.x - x, actor.y - y) * 8;
+  }
+  function impulse(actor, source, strength) {
+    if (!source) return;
+    let dx = actor.x - source.x, dy = actor.y - source.y;
+    // A projectile can already overlap its target: its velocity is the reliable
+    // direction in that case and also avoids kicking a victim toward the shooter.
+    if (source.kind && Number.isFinite(source.vx) && Number.isFinite(source.vy) && Math.hypot(source.vx, source.vy) > .0001) { dx = source.vx; dy = source.vy; }
+    const length = Math.hypot(dx, dy);
+    if (length < .0001) { dx = Math.cos(actor.angle || 0); dy = Math.sin(actor.angle || 0); }
+    else { dx /= length; dy /= length; }
+    const massScale = actor.isBoss || actor.type === 'queen' ? .2 : actor.type === 'brute' ? .48 : 1;
+    actor.impulseVX = (actor.impulseVX || 0) + dx * strength * massScale;
+    actor.impulseVY = (actor.impulseVY || 0) + dy * strength * massScale;
+    const speed = Math.hypot(actor.impulseVX, actor.impulseVY), limit = 11 * massScale;
+    if (speed > limit) { actor.impulseVX *= limit / speed; actor.impulseVY *= limit / speed; }
+  }
+  function moveImpulse(actor, dt, damping = 7) {
+    const decay = Math.exp(-damping * dt), travel = (1 - decay) / damping;
+    const dx = (actor.impulseVX || 0) * travel, dy = (actor.impulseVY || 0) * travel;
+    const x = actor.x, y = actor.y;
+    W.move(state.level, actor, dx, dy);
+    actor.impulseVX = Math.abs(actor.x - x - dx) > .00001 ? 0 : (actor.impulseVX || 0) * decay;
+    actor.impulseVY = Math.abs(actor.y - y - dy) > .00001 ? 0 : (actor.impulseVY || 0) * decay;
+    if (Math.abs(actor.impulseVX) < .01) actor.impulseVX = 0;
+    if (Math.abs(actor.impulseVY) < .01) actor.impulseVY = 0;
+  }
   function playerDefault() {
     return { x: 0, y: 0, r: .22, hp: 120, maxHp: 120, armor: 45, maxArmor: 100, angle: 0, weapon: 'rifle', owned: { pistol: true, rifle: true, shotgun: false, plasma: false },
-      ammo: { pistol: 0, shotgun: 0, rifle: 120, plasma: 0 }, clip: { pistol: 12, shotgun: 0, rifle: 30, plasma: 0 }, reload: 0, reloadWeapon: null, cooldown: 0, grenades: 3, cash: 180, level: 1, xp: 0, xpNeed: 80, upgrades: { damage: 0, speed: 0, health: 0, crit: 0 }, dashCooldown: 0, dashTime: 0, dashX: 1, dashY: 0, abilityCooldown: 0, moving: false, anim: 0, invulnerable: 0 };
+      ammo: { pistol: 0, shotgun: 0, rifle: 120, plasma: 0 }, clip: { pistol: 12, shotgun: 0, rifle: 30, plasma: 0 }, reload: 0, reloadDuration: 0, reloadWeapon: null, cooldown: 0, grenades: 3, cash: 180, level: 1, xp: 0, xpNeed: 80, upgrades: { damage: 0, speed: 0, health: 0, crit: 0 }, dashCooldown: 0, dashTime: 0, dashX: 1, dashY: 0, abilityCooldown: 0, moving: false, anim: 0, invulnerable: 0, vx: 0, vy: 0, driveVX: 0, driveVY: 0, impulseVX: 0, impulseVY: 0, moveSpeed: 0, recoil: 0, hitReact: 0, attackSwing: 0, throwTime: 0 };
   }
   function newState() {
     return { mode: 'menu', levelIndex: 0, level: null, player: playerDefault(), difficulty: 'standard', enemies: [], bullets: [], enemyBullets: [], grenades: [], pickups: [], effects: [], decals: [], corpses: [], terminals: [], nests: [], time: 0, levelTime: 0, kills: 0, aim: { x: 1, y: 0 }, pointer: { x: innerWidth * .65, y: innerHeight * .5 }, shake: 0, flash: 0, toast: '', toastTime: 0, exitReady: false, reducedMotion: false, touch: touchDevice, spawnRemaining: 0, totalEnemies: 0, wave: 1, waveProgress: 0, waveEnemiesRemaining: 0, waveInitialEnemies: 0, waveEnd: 3, bossesKilled: 0, resources: 5, resourcesCollected: 0, generatorActivated: false };
@@ -94,7 +133,7 @@
     state.resources -= 5; p.abilityCooldown = 8;
     effect('shockwave', p.x, p.y, .6, 3.8);
     for (const enemy of state.enemies) if (enemy.hp > 0 && dist(p, enemy) < 3.8 + enemy.r && W.lineOfSight(state.level, p, enemy)) {
-      damageEnemy(enemy, 180 * (1 + p.upgrades.damage * .11), { x: p.x, y: p.y, kind: 'plasma' });
+      damageEnemy(enemy, 180 * (1 + p.upgrades.damage * .11), { x: p.x, y: p.y, kind: 'shockwave' });
       enemy.cooldown = Math.max(enemy.cooldown, .65);
     }
     for (const nest of state.nests) if (nest.hp > 0 && dist(p, nest) < 3.8 && W.lineOfSight(state.level, p, nest)) damageNest(nest, 140);
@@ -246,6 +285,7 @@
     state.spawnRemaining = state.totalEnemies;
     state.levelTime = 0; state.exitReady = false; state.shake = 0; state.flash = 0;
     const p = state.player; p.x = state.level.spawn.x; p.y = state.level.spawn.y; p.angle = -.6; p.reload = 0; p.reloadWeapon = null; p.cooldown = 0; p.invulnerable = 1.5; p.moving = false; p.dashTime = 0; p.dashCooldown = 0; p.abilityCooldown = 0;
+    resetMotion(p); p.reloadDuration = 0;
     state.aim = { x: p.x + 2, y: p.y - 1 };
     levelStartInventory = inventory();
     if (writeSave) saveCheckpoint();
@@ -271,7 +311,7 @@
     const position = spec.exact && W.isWalkable(state.level, spec.x, spec.y, base.r) && dist(spec, state.player) > 2.8 ? { x: spec.x, y: spec.y } : placeNear(spec.x, spec.y, base.r, spec.offset);
     if (!position) return false;
     const maxHp = Math.round((spec.hp || base.hp) * difficulty.hp);
-    state.enemies.push({ id: ++enemyId, type: spec.type, isBoss: !!spec.isBoss, name: spec.name || '', enraged: false, burstRemaining: 0, burstTimer: 0, x: position.x, y: position.y, r: base.r, hp: maxHp, maxHp, angle: 0, anim: random() * TAU, attackFlash: 0, cooldown: .6 + random(), path: [], repath: random() * .7, alerted: false, charge: 0, telegraph: 0, chargeAngle: 0, aliveTime: 0 });
+    state.enemies.push({ id: ++enemyId, type: spec.type, isBoss: !!spec.isBoss, name: spec.name || '', enraged: false, burstRemaining: 0, burstTimer: 0, x: position.x, y: position.y, r: base.r, hp: maxHp, maxHp, angle: 0, anim: random() * TAU, attackFlash: 0, cooldown: .6 + random(), path: [], repath: random() * .7, alerted: false, charge: 0, telegraph: 0, chargeAngle: 0, aliveTime: 0, vx: 0, vy: 0, moveSpeed: 0, moving: false, impulseVX: 0, impulseVY: 0, recoil: 0, hitReact: 0, attackSwing: 0 });
     return true;
   }
   function beginWave() {
@@ -304,7 +344,7 @@
   function switchWeapon(key) {
     if (!Object.hasOwn(WEAPONS, key) || !state.player.owned[key]) { if (Object.hasOwn(WEAPONS, key)) toast('Оружие продаётся в арсенале между секторами.'); return; }
     if (state.player.weapon === key) return;
-    state.player.weapon = key; state.player.reload = 0; state.player.reloadWeapon = null; state.player.cooldown = Math.max(.12, state.player.cooldown);
+    state.player.weapon = key; state.player.reload = 0; state.player.reloadDuration = 0; state.player.reloadWeapon = null; state.player.cooldown = Math.max(.12, state.player.cooldown);
     updateUI();
   }
   function cycleWeapon() {
@@ -315,7 +355,7 @@
     if (state.mode !== 'playing') return;
     const p = state.player, spec = WEAPONS[p.weapon];
     if (p.reload || p.clip[p.weapon] >= spec.clip || (p.weapon !== 'pistol' && p.ammo[p.weapon] <= 0)) return;
-    p.reload = spec.reload; p.reloadWeapon = p.weapon; updateUI();
+    p.reload = spec.reload; p.reloadDuration = spec.reload; p.reloadWeapon = p.weapon; updateUI();
   }
   function completeReload() {
     const p = state.player, key = p.reloadWeapon;
@@ -329,7 +369,7 @@
     const p = state.player, spec = WEAPONS[p.weapon];
     if (p.cooldown > 0 || p.reload > 0) return;
     if (p.clip[p.weapon] <= 0) { reload(); if (p.weapon !== 'pistol' && p.ammo[p.weapon] <= 0) { toast('Нет патронов. Пистолет: клавиша 1.', 2); p.cooldown = .5; } return; }
-    p.clip[p.weapon]--; p.cooldown = spec.rate;
+    p.clip[p.weapon]--; p.cooldown = spec.rate; p.recoil = 1;
     let muzzle = { x: p.x + Math.cos(p.angle) * .4, y: p.y + Math.sin(p.angle) * .4 };
     // The visual gun barrel must never place a projectile beyond a wall corner.
     // Starting at the body in this case lets the same swept collision resolve it.
@@ -339,31 +379,35 @@
       state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, startX: muzzle.x, startY: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
     }
     effect('muzzle', muzzle.x, muzzle.y, .075, p.weapon === 'shotgun' ? .4 : .22, { angle: p.angle, weapon: p.weapon });
+    if (p.weapon !== 'plasma') {
+      // Ejection is deterministic and does not consume the combat RNG stream.
+      const eject = p.angle + Math.PI * .5;
+      effect('casing', p.x, p.y, 2.3, .025, { r: .025, z: 64, vz: 75, vx: Math.cos(eject) * 2.3 + p.vx * .25, vy: Math.sin(eject) * 2.3 + p.vy * .25, spin: p.angle, spinSpeed: 19, bounces: 0 });
+    }
     if (!state.reducedMotion) state.shake = Math.max(state.shake, p.weapon === 'shotgun' ? 3 : p.weapon === 'plasma' ? 2.6 : 1.4);
     sound(p.weapon === 'plasma' ? 'plasma' : 'shot');
   }
   function throwGrenade() {
     if (state.mode !== 'playing' || state.player.grenades <= 0) return;
-    const p = state.player; p.grenades--;
-    state.grenades.push({ x: p.x, y: p.y, vx: Math.cos(p.angle) * 6.5, vy: Math.sin(p.angle) * 6.5, life: 1.05, maxLife: 1.05 });
+    const p = state.player; p.grenades--; p.throwTime = .32;
+    state.grenades.push({ x: p.x, y: p.y, r: .1, vx: Math.cos(p.angle) * 6.5 + p.vx * .25, vy: Math.sin(p.angle) * 6.5 + p.vy * .25, z: 48, vz: 220, bounces: 0, spin: p.angle, spinSpeed: 13, life: 1.05, maxLife: 1.05 });
     toast('Граната!', 1); updateUI();
   }
   function damagePlayer(amount, from) {
     const p = state.player; if (p.invulnerable > 0 || state.mode !== 'playing') return;
     const total = amount * DIFFICULTIES[state.difficulty].damage;
     const absorbed = Math.min(p.armor, total * .7); p.armor -= absorbed; p.hp = Math.max(0, p.hp - total + absorbed); p.invulnerable = .14;
+    p.hitReact = 1; impulse(p, from, from && from.kind === 'explosion' ? 5 : 2.6);
     state.flash = state.reducedMotion ? .12 : .4; if (!state.reducedMotion) state.shake = Math.max(state.shake, 5);
     sound('hit'); if (from) effect('blood', p.x, p.y, .24, .25);
     if (p.hp <= 0) endGame(false);
   }
   function damageEnemy(enemy, amount, source) {
     if (enemy.hp <= 0) return;
-    enemy.hp -= amount; enemy.alerted = true; enemy.attackFlash = .12;
+    enemy.hp -= amount; enemy.alerted = true; enemy.attackFlash = .12; enemy.hitReact = 1;
     effect('blood', enemy.x, enemy.y, .18, enemy.type === 'queen' ? .4 : .2);
-    if (source && source.kind !== 'plasma' && enemy.type !== 'queen') {
-      const distance = Math.max(.01, dist(enemy, source));
-      W.move(state.level, enemy, (enemy.x - source.x) / distance * .035, (enemy.y - source.y) / distance * .035);
-    }
+    const force = source && ({ shockwave: 7.5, explosion: 8.5, shotgun: 2.4, plasma: 2.8, rifle: 1.15, pistol: 1.45 }[source.kind] || 1.2);
+    impulse(enemy, source, force);
     if (enemy.hp <= 0) killEnemy(enemy);
   }
   function killEnemy(enemy) {
@@ -371,7 +415,9 @@
     if (enemy.isBoss) { state.bossesKilled++; toast((enemy.name || 'БОСС') + ' УНИЧТОЖЕН · ' + state.bossesKilled + '/3', 4); }
     if (state.kills % 6 === 0 || enemy.isBoss) state.pickups.push({ x: enemy.x, y: enemy.y, kind: 'resource', amount: enemy.isBoss ? 3 : 1, age: 0 });
     state.spawnRemaining = Math.max(0, state.spawnRemaining - 1);
-    state.corpses.push({ x: enemy.x, y: enemy.y, type: enemy.type, angle: enemy.angle, age: 0 }); if (state.corpses.length > 90) state.corpses.shift();
+    const vx = (enemy.impulseVX || 0) + (enemy.vx || 0) * .22, vy = (enemy.impulseVY || 0) + (enemy.vy || 0) * .22;
+    const projected = W.project(vx || Math.cos(enemy.angle) * .01, vy || Math.sin(enemy.angle) * .01);
+    state.corpses.push({ x: enemy.x, y: enemy.y, r: enemy.r, type: enemy.type, isBoss: !!enemy.isBoss, angle: enemy.angle, anim: enemy.anim, age: 0, fall: 0, vx, vy, impulseVX: vx, impulseVY: vy, fallAngle: Math.atan2(projected.y, projected.x) }); if (state.corpses.length > 90) state.corpses.shift();
     state.decals.push({ x: enemy.x, y: enemy.y, r: enemy.type === 'queen' ? 1.1 : .3 + random() * .3, alpha: .55 + random() * .3, angle: random() * TAU }); if (state.decals.length > 100) state.decals.shift();
     if (random() < .18 || enemy.type === 'brute' || enemy.type === 'queen') {
       const kind = state.player.hp < 65 && random() < .5 ? 'medkit' : 'ammo';
@@ -392,10 +438,10 @@
     effect('explosion', x, y, .5, radius); sound('explosion');
     if (!state.reducedMotion) state.shake = Math.max(state.shake, 9);
     for (const enemy of state.enemies) {
-      const d = Math.hypot(enemy.x - x, enemy.y - y); if (enemy.hp > 0 && d < radius + enemy.r && W.lineOfSight(state.level, { x, y }, enemy)) damageEnemy(enemy, damage * (1 - .45 * d / radius), { x, y, kind: 'plasma' });
+      const d = Math.hypot(enemy.x - x, enemy.y - y); if (enemy.hp > 0 && d < radius + enemy.r && W.lineOfSight(state.level, { x, y }, enemy)) damageEnemy(enemy, damage * (1 - .45 * d / radius), { x, y, kind: 'explosion' });
     }
     for (const nest of state.nests) if (nest.hp > 0 && Math.hypot(nest.x - x, nest.y - y) < radius + .6 && W.lineOfSight(state.level, { x, y }, nest)) damageNest(nest, damage * .85);
-    if (!playerSafe && Math.hypot(state.player.x - x, state.player.y - y) < radius) damagePlayer(damage * .3);
+    if (!playerSafe && Math.hypot(state.player.x - x, state.player.y - y) < radius && W.lineOfSight(state.level, { x, y }, state.player)) damagePlayer(damage * .3, { x, y, kind: 'explosion' });
   }
   function segmentHit(x1, y1, x2, y2, cx, cy, radius) {
     const dx = x2 - x1, dy = y2 - y1, len = dx * dx + dy * dy;
@@ -446,6 +492,7 @@
     state.enemyBullets = state.enemyBullets.filter(b => b.ttl > 0);
   }
   function enemyShot(enemy, angle, speed, damage, kind) {
+    enemy.recoil = 1; enemy.attackSwing = 1;
     state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, startX: enemy.x, startY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
     effect('acid', enemy.x, enemy.y, .14, .25);
   }
@@ -470,7 +517,8 @@
     const neighbours = state.enemies.filter(enemy => enemy.hp > 0).map(enemy => ({ enemy, x: enemy.x, y: enemy.y, footprint: footprint(enemy) }));
     for (const enemy of state.enemies) {
       if (enemy.hp <= 0) continue;
-      enemy.aliveTime += dt; enemy.anim += dt * 5; enemy.attackFlash = Math.max(0, enemy.attackFlash - dt); enemy.cooldown -= dt; enemy.repath -= dt;
+      enemy.aliveTime += dt; agePose(enemy, dt); moveImpulse(enemy, dt);
+      enemy.attackFlash = Math.max(0, enemy.attackFlash - dt); enemy.cooldown -= dt; enemy.repath -= dt;
       const d = dist(enemy, p), los = d < 17 && W.lineOfSight(state.level, enemy, p);
       if ((los && d < 7) || d < 4.2) enemy.alerted = true;
       if (!enemy.alerted) continue;
@@ -508,7 +556,7 @@
         W.move(state.level, enemy, Math.cos(enemy.chargeAngle) * dt * 6.2, Math.sin(enemy.chargeAngle) * dt * 6.2);
         enemy.charge -= dt;
         if (Math.hypot(enemy.x - oldX, enemy.y - oldY) < dt * 1.5) enemy.charge = 0;
-        if (dist(enemy, p) < enemy.r + p.r + .15) { damagePlayer(TYPES[enemy.type].damage * 1.5, enemy); enemy.charge = 0; }
+        if (dist(enemy, p) < enemy.r + p.r + .15) { damagePlayer(TYPES[enemy.type].damage * 1.5, enemy); enemy.charge = 0; enemy.attackSwing = 1; }
         continue;
       }
       if (enemy.type === 'spitter' && los && d < 8 && d > 2 && enemy.cooldown <= 0) {
@@ -522,7 +570,7 @@
       }
       const touchingPlayer = d < enemy.r + p.r + .16;
       if (touchingPlayer) {
-        if (enemy.cooldown <= 0) { damagePlayer(TYPES[enemy.type].damage, enemy); enemy.cooldown = enemy.type === 'crawler' ? .65 : .9; enemy.attackFlash = .2; }
+        if (enemy.cooldown <= 0) { damagePlayer(TYPES[enemy.type].damage, enemy); enemy.cooldown = enemy.type === 'crawler' ? .65 : .9; enemy.attackFlash = .2; enemy.attackSwing = 1; }
       }
       let tx = p.x, ty = p.y;
       if (!los) {
@@ -564,10 +612,14 @@
       // existing wall-aware mover still govern every normal pursuit step.
       W.move(state.level, enemy, vx * velocityScale * dt, vy * velocityScale * dt);
     }
+    // All branches, including idle, telegraph and charge, report actual motion;
+    // a creature blocked by a wall cannot keep running its walk cycle in place.
+    for (const previous of neighbours) finishMotion(previous.enemy, previous.x, previous.y, dt);
     state.enemies = state.enemies.filter(enemy => enemy.hp > 0);
   }
   function updatePlayer(dt) {
     const p = state.player;
+    const oldX = p.x, oldY = p.y; agePose(p, dt);
     p.dashCooldown = Math.max(0, p.dashCooldown - dt); p.abilityCooldown = Math.max(0, p.abilityCooldown - dt);
     p.cooldown = Math.max(0, p.cooldown - dt); p.invulnerable = Math.max(0, p.invulnerable - dt);
     if (p.reload > 0) { p.reload = Math.max(0, p.reload - dt); if (p.reload === 0) completeReload(); }
@@ -577,10 +629,23 @@
     // Screen arrows remain screen arrows despite the diamond projection.
     let dx = sx + sy * 2, dy = -sx + sy * 2;
     const worldLength = Math.hypot(dx, dy); if (worldLength > 0) { const magnitude = Math.min(1, screenLength); dx = dx / worldLength * magnitude; dy = dy / worldLength * magnitude; }
-    p.moving = worldLength > .05;
-    if (p.dashTime > 0) { const dashDt = Math.min(dt, p.dashTime); W.move(state.level, p, p.dashX * 10.5 * dashDt, p.dashY * 10.5 * dashDt); p.dashTime = Math.max(0, p.dashTime - dt); p.anim += dt * 16; }
-    else if (p.moving) { W.move(state.level, p, dx * 3.05 * (1 + p.upgrades.speed * .07) * dt, dy * 3.05 * (1 + p.upgrades.speed * .07) * dt); p.dashX = dx; p.dashY = dy; p.anim += dt * 10; }
-    else p.anim += dt * 1.5;
+    const movingInput = worldLength > .05;
+    if (p.dashTime > 0) {
+      const dashDt = Math.min(dt, p.dashTime); W.move(state.level, p, p.dashX * 10.5 * dashDt, p.dashY * 10.5 * dashDt);
+      p.dashTime = Math.max(0, p.dashTime - dt); p.driveVX = p.driveVY = 0;
+    } else {
+      const speed = 3.05 * (1 + p.upgrades.speed * .07), response = movingInput ? 22 : 28;
+      const targetX = movingInput ? dx * speed : 0, targetY = movingInput ? dy * speed : 0;
+      const decay = Math.exp(-response * dt), travel = (1 - decay) / response;
+      const moveX = targetX * dt + (p.driveVX - targetX) * travel, moveY = targetY * dt + (p.driveVY - targetY) * travel;
+      const beforeX = p.x, beforeY = p.y; W.move(state.level, p, moveX, moveY);
+      p.driveVX = Math.abs(p.x - beforeX - moveX) > .00001 ? 0 : targetX + (p.driveVX - targetX) * decay;
+      p.driveVY = Math.abs(p.y - beforeY - moveY) > .00001 ? 0 : targetY + (p.driveVY - targetY) * decay;
+      if (Math.abs(p.driveVX) < .005) p.driveVX = 0;
+      if (Math.abs(p.driveVY) < .005) p.driveVY = 0;
+      if (movingInput) { p.dashX = dx; p.dashY = dy; }
+    }
+    moveImpulse(p, dt); finishMotion(p, oldX, oldY, dt);
     if (input.touchAim && Math.hypot(input.aim.x, input.aim.y) > .16) {
       let ax = input.aim.x + input.aim.y * 2, ay = -input.aim.x + input.aim.y * 2;
       let angle = Math.atan2(ay, ax);
@@ -611,7 +676,7 @@
         if (target) aim = { x: target.x, y: target.y };
       }
       if (aim && Number.isFinite(aim.x) && Number.isFinite(aim.y)) { state.aim = aim; p.angle = Math.atan2(aim.y - p.y, aim.x - p.x); }
-    } else if (p.moving) p.angle = Math.atan2(dy, dx);
+    } else if (movingInput) p.angle = Math.atan2(dy, dx);
     if (input.fire || (input.touchAim && Math.hypot(input.aim.x, input.aim.y) > .16)) fire();
   }
   function collectPickups(dt) {
@@ -738,19 +803,56 @@
   function togglePause() {
     if (state.mode === 'playing') setMode('paused'); else if (state.mode === 'paused') setMode('playing');
   }
+  function updateBallistic(body, dt, casing = false) {
+    body.z = Math.max(0, body.z || 0); body.vz = body.vz || 0; body.bounces = body.bounces || 0;
+    // Bounded physics substeps resolve a bounce before applying the next part of
+    // a long frame. World.move itself sweeps the horizontal collision circle.
+    for (let remaining = dt; remaining > .000001;) {
+      const step = Math.min(remaining, 1 / 120); remaining -= step;
+      const x = body.x, y = body.y, dx = body.vx * step, dy = body.vy * step;
+      W.move(state.level, body, dx, dy);
+      if (Math.abs(body.x - x - dx) > .00001) body.vx *= -.56;
+      if (Math.abs(body.y - y - dy) > .00001) body.vy *= -.56;
+      if (body.z > 0 || body.vz > 0) {
+        body.z += body.vz * step - 325 * step * step; body.vz -= 650 * step;
+        if (body.z <= 0) {
+          body.z = 0; body.bounces++;
+          const rebound = -body.vz * (casing ? .26 : .32);
+          body.vz = rebound > 38 ? rebound : 0;
+          body.vx *= .7; body.vy *= .7;
+          if (!casing && body.bounces === 1) effect('spark', body.x, body.y, .12, .1);
+        }
+      }
+      const grounded = body.z === 0 && body.vz === 0;
+      const decay = Math.exp(-step * (grounded ? 8 : .13));
+      body.vx *= decay; body.vy *= decay;
+      body.spin = (body.spin || 0) + (body.spinSpeed || 0) * step;
+      if (grounded) body.spinSpeed = (body.spinSpeed || 0) * decay;
+      if (grounded && Math.hypot(body.vx, body.vy) < .035) { body.vx = body.vy = body.spinSpeed = 0; }
+    }
+  }
+  function updateTransientPhysics(dt) {
+    for (const item of state.effects) {
+      item.life -= dt;
+      if (item.kind === 'casing') updateBallistic(item, dt, true);
+    }
+    state.effects = state.effects.filter(item => item.life > 0);
+    for (const corpse of state.corpses) {
+      corpse.age += dt; corpse.fall = clamp(corpse.age / .42, 0, 1);
+      const x = corpse.x, y = corpse.y;
+      moveImpulse(corpse, dt, 5.5);
+      corpse.vx = dt > 0 ? (corpse.x - x) / dt : 0; corpse.vy = dt > 0 ? (corpse.y - y) / dt : 0;
+    }
+    state.shake *= Math.exp(-dt * 12); state.flash = Math.max(0, state.flash - dt * 2);
+  }
   function update(dt) {
     state.time += dt; state.levelTime += dt;
+    updateTransientPhysics(dt);
     updatePlayer(dt); updateBullets(dt);
     if (state.mode !== 'playing') return;
     updateEnemies(dt); collectPickups(dt);
     for (const grenade of state.grenades) {
-      grenade.life -= dt;
-      const moving = { x: grenade.x, y: grenade.y, r: .1 };
-      const oldX = moving.x, oldY = moving.y;
-      W.move(state.level, moving, grenade.vx * dt, grenade.vy * dt);
-      if (Math.abs(moving.x - oldX) < Math.abs(grenade.vx * dt) * .5) grenade.vx *= -.45;
-      if (Math.abs(moving.y - oldY) < Math.abs(grenade.vy * dt) * .5) grenade.vy *= -.45;
-      grenade.x = moving.x; grenade.y = moving.y; grenade.vx *= Math.pow(.25, dt); grenade.vy *= Math.pow(.25, dt);
+      updateBallistic(grenade, Math.min(dt, Math.max(0, grenade.life))); grenade.life -= dt;
       if (grenade.life <= 0) explode(grenade.x, grenade.y, 3.1, 320, true);
     }
     state.grenades = state.grenades.filter(g => g.life > 0);
@@ -815,10 +917,6 @@
   function tick(now) {
     const dt = Math.min(.04, Math.max(0, (now - (lastFrame || now)) / 1000)); lastFrame = now;
     if (state.mode === 'playing') update(dt);
-    for (const item of state.effects) item.life -= dt;
-    state.effects = state.effects.filter(item => item.life > 0);
-    for (const corpse of state.corpses) corpse.age += dt;
-    state.shake *= Math.exp(-dt * 12); state.flash = Math.max(0, state.flash - dt * 2);
     state.toastTime -= dt; if (state.toastTime <= 0 && $('toast')) $('toast').classList.add('hidden');
     uiTimer -= dt; if (uiTimer <= 0) { updateUI(); uiTimer = .12; }
     R.render(state, dt);
@@ -899,8 +997,8 @@
       getState: () => state,
       snapshot: () => ({ mode: state.mode, levelIndex: state.levelIndex, level: state.level.id, player: { x: state.player.x, y: state.player.y, hp: state.player.hp, armor: state.player.armor, weapon: state.player.weapon, ammo: Object.assign({}, state.player.ammo), clip: Object.assign({}, state.player.clip), cash: state.player.cash, owned: Object.assign({}, state.player.owned), grenades: state.player.grenades, maxHp: state.player.maxHp, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), dashCooldown: state.player.dashCooldown, abilityCooldown: state.player.abilityCooldown }, maxHp: state.player.maxHp, wave: state.wave, waveProgress: state.waveProgress, waveEnemiesRemaining: state.waveEnemiesRemaining, pendingWaves: pendingWaves.length, bossesKilled: state.bossesKilled, resources: state.resources, resourcesCollected: state.resourcesCollected, generatorActivated: state.generatorActivated, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), enemies: state.enemies.length, spawnRemaining: state.spawnRemaining, totalEnemies: state.totalEnemies, kills: state.kills, terminalCount: state.terminals.length, activeTerminals: state.terminals.filter(t => t.active).length, livingNests: state.nests.filter(n => n.hp > 0).length, exitReady: state.exitReady, queued: queued.length, bullets: state.bullets.length, time: state.time, audioReady: !!audioContext && audioContext.state === 'running' || !!(window.FrontierV6 && window.FrontierV6.status && window.FrontierV6.status().audioReady), assetsReady: !!(R.status && R.status().assetsReady) }),
       finishLevel: () => { if (state.mode !== 'playing') return false; for (const t of state.terminals) t.active = true; for (const n of state.nests) { n.hp = 0; n.budget = 0; } queued = []; pendingWaves = []; state.wave = state.waveEnd; state.enemies = []; state.spawnRemaining = 0; updateObjective(); state.player.x = state.level.exit.x; state.player.y = state.level.exit.y; interact(); return true; },
-      step: seconds => { if (!Number.isFinite(seconds) || seconds < 0 || seconds > 10) return false; for (let t = 0; t < seconds && state.mode === 'playing'; t += .02) update(Math.min(.02, seconds - t)); updateUI(); return true; },
-      teleport: (x, y) => { if (!Number.isFinite(x) || !Number.isFinite(y) || !W.isWalkable(state.level, x, y, state.player.r)) return false; state.player.x = x; state.player.y = y; return true; },
+      step: seconds => { if (!Number.isFinite(seconds) || seconds < 0 || seconds > 10) return false; for (let t = 0; seconds - t > .00000001 && state.mode === 'playing'; t += .02) update(Math.min(.02, seconds - t)); updateUI(); return true; },
+      teleport: (x, y) => { if (!Number.isFinite(x) || !Number.isFinite(y) || !W.isWalkable(state.level, x, y, state.player.r)) return false; state.player.x = x; state.player.y = y; resetMotion(state.player); state.player.dashTime = 0; return true; },
       damagePlayer, damageEnemy, damageNest, interact, reload, switchWeapon, buy, throwGrenade, purchaseUpgrade, dashAction, useAbility, awardXP,
       fire: () => { if (state.mode === 'playing') fire(); },
       resetSeed: () => { seed = 7102026; }

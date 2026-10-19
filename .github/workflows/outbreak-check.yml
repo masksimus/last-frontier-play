@@ -56,6 +56,8 @@ jobs:
             app/docs/OUTBREAK_BROWSER_RESULTS.json
             app/docs/screenshots/outbreak-*.png
             app/docs/screenshots/siege-*.png
+            app/docs/screenshots/motion-*.png
+            app/docs/videos/*.webm
             app/package-lock.json
           if-no-files-found: error
           retention-days: 14

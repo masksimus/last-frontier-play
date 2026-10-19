@@ -5,7 +5,9 @@ invulnerability. A desktop fixture uses ?test=1 to accelerate early waves and
 reduce final-wave target HP; objectives, projectile hits, purchases and exits
 still use production code and UI input. Reference screenshots arrange actual
 final-wave enemies on walkable tiles and trigger the real weapon/grenade code.
-They are documented visual fixtures, not ordinary-play screenshots or proof of
+A separate desktop motion fixture records an actual WebM and rendered gait
+poses while checking recoil, hit displacement, corpse falls and grenade gravity.
+These are documented visual fixtures, not ordinary-play screenshots or proof of
 a full campaign playthrough.
 """
 from functools import partial
@@ -26,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 DOCS = ROOT / "docs"
 SCREENSHOTS = DOCS / "screenshots"
+VIDEOS = DOCS / "videos"
 REPORT = DOCS / "OUTBREAK_BROWSER_RESULTS.json"
 PROFILES = [("desktop", 1366, 768, False), ("mobile", 390, 844, True),
             ("landscape", 844, 390, True)]
@@ -469,6 +472,203 @@ def verify_controlled_campaign(page, item):
     item["checks"].append("controlled three-level objectives, weapon shop, checkpoint, boss and victory")
 
 
+
+def motion_state(page):
+    """Read simulation values and the renderer pose actually used for drawing."""
+    return page.evaluate("""() => {const s=OutbreakDebug.getState(),p=s.player;
+        const body=e=>({x:e.x,y:e.y,vx:e.vx,vy:e.vy,moveSpeed:e.moveSpeed,anim:e.anim,
+          recoil:e.recoil,hitReact:e.hitReact,attackSwing:e.attackSwing});
+        return {time:s.time,player:{...body(p),reload:p.reload,throwTime:p.throwTime},
+          grenades:s.grenades.map(g=>({x:g.x,y:g.y,z:g.z,vz:g.vz,bounces:g.bounces,
+            spin:g.spin,life:g.life})),corpses:s.corpses.map(c=>({x:c.x,y:c.y,age:c.age,fall:c.fall})),
+          effects:s.effects.map(e=>({kind:e.kind,life:e.life})),motion:OutbreakRenderer.status().motion};}""")
+
+
+def verify_motion(page, item):
+    """A separate controlled combat fixture records time, movement and real inputs.
+
+    Actor placement/HP and disabled nest budgets isolate animation. Movement,
+    shots, reload, hit impulses, death, grenade gravity and pause are production
+    systems. The video and pose measurements are not a manual playthrough.
+    """
+    page.locator("#start").click()
+    mode(page, "briefing")
+    page.wait_for_function("OutbreakRenderer.status().hdAssetsReady === true", timeout=10000)
+    page.locator("#deploy").click()
+    mode(page, "playing")
+    prepare_final_wave(page, item)
+    fixture = page.evaluate("""() => {const s=OutbreakDebug.getState();
+        const target=s.enemies.find(e=>e.type==='brute'&&!e.isBoss)||s.enemies.find(e=>e.isBoss);
+        if(!target)throw Error('Motion fixture needs a production heavy enemy');
+        for(const n of s.nests){n.budget=0;n.waveBudget=0;n.spawnTimer=1e6;}
+        target.x=9.1;target.y=6.5;target.cooldown=1e6;target.telegraph=1e6;
+        target.hp=target.maxHp=1200;target.path=[];target.charge=0;
+        s.enemies=[target];s.enemyBullets=[];s.bullets=[];s.grenades=[];
+        s.corpses=[];s.effects=[];s.pickups=[];s.reducedMotion=true;s.shake=0;
+        s.player.invulnerable=1e6;s.player.reload=0;s.player.cooldown=0;
+        s.player.weapon='rifle';s.player.clip.rifle=30;s.player.ammo.rifle=120;
+        s.player.grenades=3;
+        return {targetId:target.id,targetType:target.type,
+          method:'Controlled placement and HP of a production heavy enemy, disabled nest budgets and player invulnerability. Real D/mouse/R/Space/Escape inputs; production physics and rendered animation. Not a manual playthrough.'};}""")
+    item["motionFixture"] = fixture
+    teleport(page, 6.5, 6.5)
+    page.wait_for_function("OutbreakRenderer.status().motion?.playerPose !== undefined", timeout=3000)
+    idle = motion_state(page)
+    require(idle["motion"]["animatedActors"] >= 2, "Renderer did not animate the player and target")
+    screenshot(page, item, "idle", prefix="motion")
+    walks = []
+    page.keyboard.down("d")
+    try:
+        page.wait_for_function("OutbreakDebug.getState().player.moveSpeed > 1", timeout=1500)
+        for index in range(6):
+            page.wait_for_timeout(70)
+            walks.append(motion_state(page))
+            if index in [1, 4]:
+                screenshot(page, item, f"stride-{index}", prefix="motion")
+    finally:
+        page.keyboard.up("d")
+    gait = [sample["motion"]["playerPose"] for sample in walks]
+    foot_motion = max(pose["leftFootX"] for pose in gait) - min(pose["leftFootX"] for pose in gait)
+    require(foot_motion > .5, "Walking only translates the sprite; the rendered foot pose does not change")
+    require(walks[-1]["player"]["anim"] > idle["player"]["anim"] + 1,
+            "Walk animation did not advance with actual displacement")
+    page.wait_for_function("OutbreakDebug.getState().player.moveSpeed < .03", timeout=2000)
+    stopped = motion_state(page)
+    page.wait_for_timeout(160)
+    settled = motion_state(page)
+    require(abs(settled["player"]["anim"] - stopped["player"]["anim"]) < .05,
+            "Locomotion animation keeps walking after the body stops")
+    fixture["walking"] = {"idle": idle, "samples": walks, "stopped": settled,
+                          "leftFootTravelPixels": round(foot_motion, 3)}
+    item["checks"].append("real movement advances distinct rendered foot poses; gait stops after deceleration")
+
+    # Reposition only the test fixture. Aim uses the actual current actor pose.
+    teleport(page, 6.5, 6.5)
+    before_hit = page.evaluate("""id => {const e=OutbreakDebug.getState().enemies.find(e=>e.id===id);
+        return {x:e.x,y:e.y,hp:e.hp};}""", fixture["targetId"])
+    aim = page.evaluate("""id=>OutbreakRenderer.actorAimPoint(
+        OutbreakDebug.getState().enemies.find(e=>e.id===id))""", fixture["targetId"])
+    page.mouse.move(aim["x"], aim["y"])
+    page.mouse.down()
+    try:
+        page.wait_for_function("""spec => {const s=OutbreakDebug.getState();
+            const e=s.enemies.find(e=>e.id===spec.id);
+            return e&&e.hp<spec.hp&&e.hitReact>0&&s.player.recoil>0;}""",
+            arg={"id": fixture["targetId"], "hp": before_hit["hp"]}, timeout=2500)
+        hit = page.evaluate("""id=>{const s=OutbreakDebug.getState(),e=s.enemies.find(e=>e.id===id);
+            return {x:e.x,y:e.y,hp:e.hp,hitReact:e.hitReact,impulseVX:e.impulseVX,impulseVY:e.impulseVY,
+              playerRecoil:s.player.recoil,pose:OutbreakRenderer.status().motion.playerPose};}""",
+            fixture["targetId"])
+        screenshot(page, item, "recoil-hit", prefix="motion")
+    finally:
+        page.mouse.up()
+    page.wait_for_timeout(150)
+    after_hit = page.evaluate("""id=>{const e=OutbreakDebug.getState().enemies.find(e=>e.id===id);
+        return {x:e.x,y:e.y,hp:e.hp};}""", fixture["targetId"])
+    require(math.hypot(after_hit["x"]-before_hit["x"], after_hit["y"]-before_hit["y"]) > .01,
+            "Projectile hit did not physically displace the stationary heavy enemy")
+    require(hit["playerRecoil"] > 0 and hit["hitReact"] > 0,
+            "Production fire did not trigger recoil and hit reactions")
+    fixture["hit"] = {"before": before_hit, "reaction": hit, "after": after_hit}
+    item["checks"].append("real rifle fire produces recoil, hit animation and collision-aware enemy displacement")
+    page.keyboard.press("r")
+    page.wait_for_function("OutbreakRenderer.status().motion.playerPose.reload > 0", timeout=1500)
+    screenshot(page, item, "reload", prefix="motion")
+    page.wait_for_function("OutbreakDebug.getState().player.reload === 0", timeout=3000)
+    item["checks"].append("real reload input produces a visible weapon pose before the magazine refills")
+
+    page.evaluate("id=>OutbreakDebug.getState().enemies.find(e=>e.id===id).hp=1", fixture["targetId"])
+    aim = page.evaluate("""id=>OutbreakRenderer.actorAimPoint(
+        OutbreakDebug.getState().enemies.find(e=>e.id===id))""", fixture["targetId"])
+    page.mouse.move(aim["x"], aim["y"])
+    page.mouse.down()
+    try:
+        page.wait_for_function("OutbreakDebug.getState().corpses.length > 0", timeout=2500)
+    finally:
+        page.mouse.up()
+    death_start = motion_state(page)
+    screenshot(page, item, "death-fall", prefix="motion")
+    page.wait_for_timeout(280)
+    death_later = motion_state(page)
+    require(death_later["corpses"][0]["fall"] > death_start["corpses"][0]["fall"],
+            "Killed actor immediately becomes a static corpse instead of progressing through a fall")
+    fixture["death"] = {"initial": death_start["corpses"][0], "later": death_later["corpses"][0]}
+    item["checks"].append("a real projectile kill progresses through a timed corpse fall")
+
+    # A natural fuse must allow the grenade to rise, descend and bounce. Pause
+    # partway through the throw also verifies render time and death/effect clocks.
+    page.mouse.move(1000, 400)
+    page.keyboard.press("Space")
+    page.wait_for_function("OutbreakDebug.getState().grenades.length === 1", timeout=1000)
+    throw = motion_state(page)
+    require(throw["grenades"][0]["z"] > 0, "Grenade has no physical height above the floor")
+    page.wait_for_timeout(100)
+    page.keyboard.press("Escape")
+    mode(page, "paused")
+    page.wait_for_function("OutbreakRenderer.status().motion.paused === true", timeout=1000)
+    paused = motion_state(page)
+    page.wait_for_timeout(200)
+    frozen = motion_state(page)
+    require(paused == frozen, "Pause changes physics, grenade/corpse/effect clocks or rendered pose")
+    page.keyboard.press("Escape")
+    mode(page, "playing")
+    arc = [throw["grenades"][0]]
+    exploded = False
+    for _ in range(65):
+        sample = motion_state(page)
+        if sample["grenades"]:
+            arc.append(sample["grenades"][0])
+        else:
+            exploded = any(effect["kind"] == "explosion" for effect in sample["effects"])
+            break
+        if len(arc) == 6:
+            screenshot(page, item, "grenade-airborne", prefix="motion")
+        page.wait_for_timeout(30)
+    require(exploded, "Grenade natural fuse did not create the production explosion")
+    require(all(sample["z"] >= 0 for sample in arc), "Grenade penetrated the floor")
+    require(any(sample["vz"] > 0 for sample in arc) and any(sample["vz"] < 0 for sample in arc),
+            "Grenade did not rise and descend under gravity")
+    require(max(sample["bounces"] for sample in arc) > 0, "Grenade did not bounce before its natural fuse expired")
+    screenshot(page, item, "grenade-explosion", prefix="motion")
+    fixture["grenade"] = {"arc": arc, "paused": paused, "unchangedAfterPause": frozen == paused}
+    item["checks"].extend(["physical grenade rises, falls, bounces and explodes on its natural fuse",
+                            "pause freezes movement, grenade/corpse/effect clocks and the rendered pose"])
+    item["renderer"] = page.evaluate("OutbreakRenderer.status()")
+
+
+def run_motion_profile(browser, url, results):
+    item = {"profile": "motion-desktop", "viewport": [1366, 768], "passed": False,
+            "checks": [], "screenshots": [], "pageErrors": []}
+    results.append(item)
+    VIDEOS.mkdir(parents=True, exist_ok=True)
+    context = browser.new_context(viewport={"width": 1366, "height": 768},
+        record_video_dir=str(VIDEOS), record_video_size={"width": 1280, "height": 720})
+    page = context.new_page()
+    video = page.video
+    page.set_default_timeout(4000)
+    page.on("pageerror", lambda error: item["pageErrors"].append(str(error)))
+    try:
+        page.goto(url + "?test=1", wait_until="load", timeout=10000)
+        mode(page, "menu")
+        if os.environ.get("FRONTIER_REQUIRE_PIXI") == "1":
+            page.wait_for_function("window.FrontierV6?.status().ready === true", timeout=10000)
+        verify_motion(page, item)
+        require(not item["pageErrors"], f"JavaScript errors: {item['pageErrors']}")
+        item["passed"] = True
+    except Exception as error:
+        item["error"] = str(error)
+        try:
+            screenshot(page, item, "failure", prefix="motion")
+        except Exception:
+            pass
+    finally:
+        context.close()
+        if video:
+            target = VIDEOS / "motion-desktop.webm"
+            Path(video.path()).replace(target)
+            item["video"] = str(target.relative_to(ROOT))
+
+
 def run():
     started = time.monotonic()
     results = []
@@ -571,6 +771,7 @@ def run():
                         pass
                 finally:
                     context.close()
+            run_motion_profile(browser, url, results)
             browser.close()
     except Exception as error:
         fatal_error = str(error)
@@ -580,7 +781,7 @@ def run():
             server.shutdown()
             server.server_close()
         DOCS.mkdir(parents=True, exist_ok=True)
-        report = {"passed": fatal_error is None and len(results) == len(PROFILES)
+        report = {"passed": fatal_error is None and len(results) == len(PROFILES) + 1
                   and all(item["passed"] for item in results),
                   "durationSeconds": round(time.monotonic() - started, 2),
                   "build": "dist", "requiresPixi": os.environ.get("FRONTIER_REQUIRE_PIXI") == "1",

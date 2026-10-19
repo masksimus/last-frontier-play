@@ -35,6 +35,7 @@ function boot({ storage = new Map(), search = '?test=1' } = {}) {
   };
   const documentHandlers = new Map();
   const windowHandlers = new Map();
+  let animationFrame;
   const context = {
     console, Math, URLSearchParams,
     performance: { now: () => 100 },
@@ -47,7 +48,7 @@ function boot({ storage = new Map(), search = '?test=1' } = {}) {
       setItem: (key, value) => storage.set(key, value),
       removeItem: key => storage.delete(key)
     },
-    requestAnimationFrame() {},
+    requestAnimationFrame(callback) { animationFrame = callback; },
     document: {
       body: { dataset: {} },
       getElementById: element,
@@ -68,7 +69,22 @@ function boot({ storage = new Map(), search = '?test=1' } = {}) {
   vm.runInContext(engine, context, { filename: 'iso-game.js' });
   const click = id => element(id).handlers.get('click')();
   const start = () => { click('start'); click('deploy'); };
-  return { context, element, click, start, storage, debug: context.OutbreakDebug, windowHandlers, documentHandlers };
+  return { context, element, click, start, storage, debug: context.OutbreakDebug, windowHandlers, documentHandlers, frame: now => animationFrame(now) };
+}
+
+function physicsArena() {
+  const game = boot(); game.start();
+  const state = game.debug.getState();
+  state.nests = []; state.pickups = [];
+  state.level.map = Array.from({ length: 24 }, (_, y) => Array.from({ length: 24 }, (_, x) =>
+    x > 0 && y > 0 && x < 23 && y < 23 ? '.' : '#').join(''));
+  game.debug.teleport(10, 10); state.player.invulnerable = 1000;
+  state.enemies = [{ ...state.enemies[0], id: 5000, type: 'brute', r: .36, x: 15, y: 10, hp: 2000, maxHp: 2000, alerted: true, telegraph: 100, cooldown: 100, path: [] }];
+  return game;
+}
+
+function key(game, code, pressed = true) {
+  game.documentHandlers.get(pressed ? 'keydown' : 'keyup')({ code, target: { tagName: 'BODY' }, repeat: false, preventDefault() {} });
 }
 
 test('combat waits for held left mouse input before spending ammunition', () => {
@@ -361,4 +377,142 @@ test('speed and critical upgrades improve movement and actual shot outcomes', ()
     return s.bullets.filter(bullet => bullet.damage > 23.1).length;
   }
   assert.ok(criticalShots(upgraded) > criticalShots(normal) + 10, 'critical perk produces more amplified hits');
+});
+
+test('movement accelerates responsively, brakes after release and advances gait only on travelled distance', () => {
+  const game = physicsArena(), p = game.debug.getState().player;
+  key(game, 'KeyD'); game.debug.step(.02);
+  assert.ok(p.moveSpeed > .3 && p.moveSpeed < 1, 'first step accelerates rather than jumping to full speed');
+  game.debug.step(.2);
+  assert.ok(p.moveSpeed > 3 && p.moveSpeed <= 3.051);
+  const before = { x: p.x, y: p.y, anim: p.anim };
+  key(game, 'KeyD', false); game.debug.step(.02);
+  assert.ok(p.moveSpeed > 1, 'release has a short braking motion');
+  assert.ok(p.anim > before.anim);
+  game.debug.step(.4);
+  assert.equal(p.moving, false); assert.equal(p.driveVX, 0); assert.equal(p.driveVY, 0);
+  assert.ok(Math.hypot(p.x - before.x, p.y - before.y) < .12, 'braking cannot make the controls feel slippery');
+  const stopped = p.anim; game.debug.step(.2); assert.equal(p.anim, stopped, 'idle feet do not keep walking');
+  game.debug.teleport(22.779, 1.221); key(game, 'KeyD'); game.debug.step(.3);
+  const blocked = p.anim; game.debug.step(.2);
+  assert.equal(p.anim, blocked, 'collision blocks the gait as well as the body');
+  assert.equal(p.moveSpeed, 0);
+});
+
+test('damped hit impulses slide without tunnelling through walls and heavy bodies resist push', () => {
+  const game = physicsArena(), s = game.debug.getState(), target = s.enemies[0];
+  target.x = 22.6; target.y = 10;
+  game.debug.damageEnemy(target, 1, { x: 20, y: 10, kind: 'explosion' });
+  assert.ok(target.impulseVX > 4); assert.equal(target.hitReact, 1);
+  game.debug.step(.7);
+  assert.ok(target.x >= 22.6 && target.x <= 22.64, 'impact stops on the near side of the wall');
+  assert.ok(World.isWalkable(s.level, target.x, target.y, target.r));
+  assert.equal(target.impulseVX, 0); assert.equal(target.hitReact, 0);
+  target.x = 15; target.type = 'crawler'; target.impulseVX = 0; target.impulseVY = 0;
+  game.debug.damageEnemy(target, 1, { x: 14, y: 10, kind: 'rifle', vx: 29, vy: 0 });
+  const smallPush = target.impulseVX;
+  target.type = 'brute'; target.impulseVX = 0;
+  game.debug.damageEnemy(target, 1, { x: 14, y: 10, kind: 'rifle', vx: 29, vy: 0 });
+  assert.ok(target.impulseVX < smallPush * .5);
+  s.player.invulnerable = 0; s.player.angle = Math.PI;
+  game.debug.damagePlayer(10, { x: 9, y: 10, type: 'crawler', vx: 0, vy: 2 });
+  assert.ok(s.player.impulseVX > 0); assert.equal(s.player.hitReact, 1);
+  assert.equal(s.player.impulseVY, 0, 'melee uses the attacker position, not its sideways steering velocity or the victim aim');
+});
+
+test('shockwave applies a radial physical impulse only to unobstructed targets', () => {
+  const game = physicsArena(), s = game.debug.getState(), target = s.enemies[0];
+  target.x = 12; target.y = 10; s.resources = 5;
+  assert.equal(game.debug.useAbility(), true);
+  assert.ok(target.impulseVX > 3.5); assert.equal(target.impulseVY, 0);
+  game.debug.step(.15);
+  assert.ok(target.x > 12.3, 'a telegraphing target is physically pushed even though it is not pursuing');
+  // The production corner remains a line-of-sight barrier for both damage and force.
+  s.level = World.level(0); game.debug.teleport(12.78, 6.78);
+  target.x = 13.55; target.y = 7.43; target.impulseVX = target.impulseVY = 0;
+  s.resources = 5; s.player.abilityCooldown = 0;
+  const hp = target.hp; game.debug.useAbility();
+  assert.equal(target.hp, hp); assert.equal(target.impulseVX, 0); assert.equal(target.impulseVY, 0);
+});
+
+test('grenades follow a gravitational arc, rebound off walls and settle after ground bounces', () => {
+  const game = physicsArena(), s = game.debug.getState();
+  game.debug.teleport(22.7, 8); s.player.angle = 0; game.debug.throwGrenade();
+  const grenade = s.grenades[0];
+  assert.equal(grenade.z, 48); assert.equal(grenade.vz, 220); assert.equal(s.player.throwTime, .32);
+  grenade.life = 4; // Observe the same body after its normal fuse, without detonating it.
+  game.debug.step(.1);
+  assert.ok(grenade.vx < 0, 'a solid wall reflects horizontal velocity');
+  assert.ok(grenade.z > 48 && grenade.vz > 0, 'the thrown grenade initially rises');
+  game.debug.step(.4);
+  assert.ok(grenade.vz < 0 && grenade.z > 0, 'gravity reverses vertical velocity before impact');
+  game.debug.step(.4);
+  assert.ok(grenade.bounces >= 1 && grenade.vz > 0, 'the first ground impact rebounds visibly');
+  game.debug.step(2);
+  assert.equal(grenade.z, 0); assert.equal(grenade.vz, 0);
+  assert.equal(grenade.vx, 0); assert.equal(grenade.vy, 0);
+  assert.ok(World.isWalkable(s.level, grenade.x, grenade.y, grenade.r));
+  const resting = { x: grenade.x, y: grenade.y, spin: grenade.spin };
+  game.debug.step(.2); assert.deepEqual({ x: grenade.x, y: grenade.y, spin: grenade.spin }, resting);
+});
+
+test('the normal grenade fuse explodes after its first bounce and pushes surviving enemies', () => {
+  const game = physicsArena(), s = game.debug.getState(), target = s.enemies[0];
+  s.player.angle = 0; target.x = 17; target.y = 10;
+  game.debug.throwGrenade(); const grenade = s.grenades[0];
+  game.debug.step(.9); assert.ok(grenade.bounces >= 1); assert.equal(s.grenades.length, 1);
+  game.debug.step(.16);
+  assert.equal(s.grenades.length, 0); assert.ok(s.effects.some(e => e.kind === 'explosion'));
+  assert.ok(target.hp < 2000 && target.impulseVX > 0, 'the actual explosion deals damage and pushes outward');
+});
+
+test('shells and corpses have independent airborne/falling motion and finally come to rest', () => {
+  const game = physicsArena(), s = game.debug.getState(), target = s.enemies[0];
+  s.player.angle = 0; game.debug.fire();
+  const casing = s.effects.find(item => item.kind === 'casing');
+  assert.ok(casing && casing.z > 0); assert.equal(s.player.recoil, 1);
+  const casingStart = { x: casing.x, y: casing.y };
+  game.debug.step(.2);
+  assert.ok(Math.hypot(casing.x - casingStart.x, casing.y - casingStart.y) > .3);
+  game.debug.damageEnemy(target, 100000, { x: target.x - 1, y: target.y, kind: 'shotgun' });
+  const corpse = s.corpses[0], deathX = corpse.x;
+  assert.equal(corpse.fall, 0); assert.ok(Number.isFinite(corpse.fallAngle));
+  game.debug.step(.2);
+  assert.ok(corpse.fall > .45 && corpse.fall < .5); assert.ok(corpse.x > deathX);
+  game.debug.step(1.5);
+  assert.equal(corpse.fall, 1); assert.equal(corpse.vx, 0); assert.equal(corpse.vy, 0);
+  assert.equal(casing.z, 0); assert.equal(casing.vz, 0); assert.equal(casing.vx, 0); assert.equal(casing.vy, 0);
+  assert.ok(World.isWalkable(s.level, corpse.x, corpse.y, corpse.r));
+});
+
+test('pause freezes effects, corpses and ballistic bodies through real animation frames; teleport resets inertia', () => {
+  const game = physicsArena(), s = game.debug.getState();
+  key(game, 'KeyD'); game.debug.step(.1); key(game, 'KeyD', false);
+  game.debug.fire(); game.debug.throwGrenade(); game.debug.damageEnemy(s.enemies[0], 100000, { x: 14, y: 10, kind: 'rifle' });
+  game.frame(100); game.frame(120); game.click('pauseButton');
+  const frozen = JSON.stringify({ player: s.player, effects: s.effects, corpses: s.corpses, grenades: s.grenades, time: s.time });
+  game.frame(160); game.frame(200); game.debug.step(.4);
+  assert.equal(JSON.stringify({ player: s.player, effects: s.effects, corpses: s.corpses, grenades: s.grenades, time: s.time }), frozen);
+  game.click('resume'); game.frame(240);
+  assert.ok(s.corpses[0].age > JSON.parse(frozen).corpses[0].age);
+  s.player.impulseVX = 4; s.player.driveVY = 3; game.debug.teleport(9, 9);
+  assert.equal(s.player.impulseVX, 0); assert.equal(s.player.driveVY, 0); assert.equal(s.player.moveSpeed, 0);
+  const point = { x: s.player.x, y: s.player.y }; game.debug.step(.2);
+  assert.deepEqual({ x: s.player.x, y: s.player.y }, point);
+});
+
+test('acceleration and damped impulses cover the same distance at different frame rates', () => {
+  function simulate(frameMs) {
+    const game = physicsArena(), state = game.debug.getState();
+    game.frame(100); key(game, 'KeyD');
+    game.debug.damageEnemy(state.enemies[0], 1, { x: 14, y: 10, kind: 'explosion' });
+    for (let now = 100 + frameMs; now <= 500; now += frameMs) game.frame(now);
+    return { player: state.player, enemy: state.enemies[0] };
+  }
+  const slow = simulate(40), fast = simulate(10);
+  for (const name of ['player', 'enemy']) {
+    assert.ok(Math.hypot(slow[name].x - fast[name].x, slow[name].y - fast[name].y) < .000001,
+      name + ' motion must not depend on the render frame rate');
+    assert.ok(Math.abs(slow[name].anim - fast[name].anim) < .000001, 'gait follows equal travelled distance');
+  }
 });

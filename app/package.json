@@ -1,6 +1,6 @@
 {
   "name": "last-frontier-outbreak",
-  "version": "14.1.0-rc.1",
+  "version": "14.2.0-rc.1",
   "private": true,
   "scripts": {
     "build": "python3 scripts/build_release.py",
