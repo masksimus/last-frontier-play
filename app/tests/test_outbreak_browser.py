@@ -504,7 +504,7 @@ def verify_motion(page, item):
         target.x=9.1;target.y=6.5;target.cooldown=1e6;target.telegraph=1e6;
         target.hp=target.maxHp=1200;target.path=[];target.charge=0;
         s.enemies=[target];s.enemyBullets=[];s.bullets=[];s.grenades=[];
-        s.corpses=[];s.effects=[];s.pickups=[];s.reducedMotion=true;s.shake=0;
+        s.corpses=[];s.effects=[];s.pickups=[];s.reducedMotion=false;s.shake=0;
         s.player.invulnerable=1e6;s.player.reload=0;s.player.cooldown=0;
         s.player.weapon='rifle';s.player.clip.rifle=30;s.player.ammo.rifle=120;
         s.player.grenades=3;
@@ -598,6 +598,19 @@ def verify_motion(page, item):
     # A natural fuse must allow the grenade to rise, descend and bounce. Pause
     # partway through the throw also verifies render time and death/effect clocks.
     page.mouse.move(1000, 400)
+    # Sample on animation frames, independently of screenshot encoding or Python
+    # round trips, so the short interval between bounce and explosion is observed.
+    page.evaluate("""() => {
+        const trace=window.__grenadeTrace={samples:[],started:false,done:false,exploded:false};
+        function sample(){const s=OutbreakDebug.getState(),g=s.grenades[0];
+          if(g){trace.started=true;const previous=trace.samples.at(-1);
+            if(!previous||previous.life!==g.life)trace.samples.push({x:g.x,y:g.y,z:g.z,
+              vz:g.vz,bounces:g.bounces,spin:g.spin,life:g.life});
+          }else if(trace.started){trace.done=true;trace.exploded=s.effects.some(e=>e.kind==='explosion');return;}
+          requestAnimationFrame(sample);
+        }
+        requestAnimationFrame(sample);
+    }""")
     page.keyboard.press("Space")
     page.wait_for_function("OutbreakDebug.getState().grenades.length === 1", timeout=1000)
     throw = motion_state(page)
@@ -612,18 +625,10 @@ def verify_motion(page, item):
     require(paused == frozen, "Pause changes physics, grenade/corpse/effect clocks or rendered pose")
     page.keyboard.press("Escape")
     mode(page, "playing")
-    arc = [throw["grenades"][0]]
-    exploded = False
-    for _ in range(65):
-        sample = motion_state(page)
-        if sample["grenades"]:
-            arc.append(sample["grenades"][0])
-        else:
-            exploded = any(effect["kind"] == "explosion" for effect in sample["effects"])
-            break
-        if len(arc) == 6:
-            screenshot(page, item, "grenade-airborne", prefix="motion")
-        page.wait_for_timeout(30)
+    screenshot(page, item, "grenade-airborne", prefix="motion")
+    page.wait_for_function("window.__grenadeTrace.done", timeout=5000)
+    trace = page.evaluate("window.__grenadeTrace")
+    arc, exploded = trace["samples"], trace["exploded"]
     require(exploded, "Grenade natural fuse did not create the production explosion")
     require(all(sample["z"] >= 0 for sample in arc), "Grenade penetrated the floor")
     require(any(sample["vz"] > 0 for sample in arc) and any(sample["vz"] < 0 for sample in arc),
