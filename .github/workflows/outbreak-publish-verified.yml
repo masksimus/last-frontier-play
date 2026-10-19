@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fe28e1cfcca3b72fb95cca624254eb908302358e
+          ref: a4f3363bd080ab62e16122401c054d1728cc777c
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -53,6 +53,8 @@ jobs:
             app/docs/OUTBREAK_BROWSER_RESULTS.json
             app/docs/screenshots/outbreak-*.png
             app/docs/screenshots/siege-*.png
+            app/docs/screenshots/motion-*.png
+            app/docs/videos/*.webm
             outbreak-pages-preservation.json
             app/last-frontier-release.zip
           if-no-files-found: error
