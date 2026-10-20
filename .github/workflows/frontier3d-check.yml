@@ -1,0 +1,52 @@
+name: Frontier 3D browser and physics verification
+on:
+  push:
+    paths: ['app/**', '.github/workflows/frontier3d-check.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/frontier3d-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontier3d-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies and verify release
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run verify
+          npm run build:vite
+          npm run verify:dist
+      - name: Install Chromium and video recorder
+        run: |
+          python3 -m pip install --disable-pip-version-check playwright==1.56.0
+          python3 -m playwright install --with-deps chromium ffmpeg
+      - name: Verify actual WebGL meshes, muzzle shots and Cannon contacts
+        run: python3 app/tests/test_frontier3d_browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-frontier-three-browser
+          path: |
+            app/last-frontier-release.zip
+            app/dist/build-manifest.json
+            app/docs/FRONTIER3D_BROWSER_RESULTS.json
+            app/docs/screenshots/three-*.png
+            app/docs/videos/three-*.webm
+            app/package-lock.json
+          if-no-files-found: error
+          retention-days: 14

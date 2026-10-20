@@ -1,0 +1,720 @@
+{
+  "status": "passed",
+  "errors": [],
+  "spriteCount": 44,
+  "license": "CC0-1.0",
+  "original": true,
+  "projection": "runtime x right/down; runtime y left/down; Blender coordinates swap x/y",
+  "blenderSource": {
+    "file": "outbreak.blend",
+    "bytes": 237782,
+    "sha256": "7fa1cb310f5fbe739f0ba1e2e8e7cbee3c503a4780d71431eff5ea57ee9c7e5e",
+    "compression": "Blender-native compressed .blend; lossless; editable"
+  },
+  "sprites": [
+    {
+      "name": "floor",
+      "bytes": 49807,
+      "size": [
+        256,
+        128
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        12,
+        2,
+        244,
+        124
+      ],
+      "sha256": "b847678b63c24634d00bf3971f247cd4f5207978ac3d30270be8dc711ec1389a"
+    },
+    {
+      "name": "wall",
+      "bytes": 66131,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        47,
+        35,
+        209,
+        203
+      ],
+      "sha256": "98476774e0696e4d97f8e0b873593387fa146ab9a7be0f53dfa8f8a2519ec893"
+    },
+    {
+      "name": "crate",
+      "bytes": 76903,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        47,
+        44,
+        210,
+        209
+      ],
+      "sha256": "5857e3eef67c36c7834fef9ef4136299bd1a6b11b8a41dd615208d614cfcd7ef"
+    },
+    {
+      "name": "barrel",
+      "bytes": 58721,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        82,
+        59,
+        174,
+        191
+      ],
+      "sha256": "9cd2ee50d2071c30eae2c38e2f6442a7ee70c191a2c295775a4943d35dc92718"
+    },
+    {
+      "name": "terminal",
+      "bytes": 60184,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        72,
+        66,
+        201,
+        207
+      ],
+      "sha256": "053f407c1c022427c32365f12420f9e343f1778746b272654c815c450f3790cf"
+    },
+    {
+      "name": "generator",
+      "bytes": 75558,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        38,
+        49,
+        217,
+        214
+      ],
+      "sha256": "e9b1af7d4ad5fd7648f4d9f8fdddd12b2d2e6d6d883746ee487555a9097e83ad"
+    },
+    {
+      "name": "nest",
+      "bytes": 72221,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        44,
+        59,
+        211,
+        190
+      ],
+      "sha256": "6d6b043fd87fc050a8b7b4462bc66e401937473ef54c7a4dd7cf684e8f605152"
+    },
+    {
+      "name": "marine",
+      "bytes": 63385,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        84,
+        48,
+        200,
+        208
+      ],
+      "sha256": "f709a8201b02c6e4513b572870f1ff3f6260a162e70c893d4afd2dc3cfa22204"
+    },
+    {
+      "name": "crawler",
+      "bytes": 57537,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        72,
+        215,
+        208
+      ],
+      "sha256": "baac4cd40c552e176f345dfcb74f0b6b9885d4510265be4827d681341278e8f8"
+    },
+    {
+      "name": "brute",
+      "bytes": 57320,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        72,
+        215,
+        208
+      ],
+      "sha256": "a6259e4afe9ae69ae6d657aa777f0973e54edd4b42fdb5dccb9c8481991c348c"
+    },
+    {
+      "name": "queen",
+      "bytes": 61009,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        65,
+        215,
+        208
+      ],
+      "sha256": "e83f93428565d37732af3bea208830745eb36e7789b357b30bfb802100dd37cc"
+    },
+    {
+      "name": "marine_0",
+      "bytes": 63383,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        84,
+        48,
+        200,
+        208
+      ],
+      "sha256": "44cab82232599492badd5a205f34b8a78136ded1560a043b082e2478c8143ed3"
+    },
+    {
+      "name": "marine_1",
+      "bytes": 61070,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        76,
+        49,
+        180,
+        209
+      ],
+      "sha256": "5566342c9820b21abb654efc023e796b94c923a94f7208c0f80ee0e41edddb4c"
+    },
+    {
+      "name": "marine_2",
+      "bytes": 62149,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        39,
+        48,
+        172,
+        214
+      ],
+      "sha256": "36b06b6d45239a1841d6285c30cee28deb03307c57e609edd091a495f227bd4b"
+    },
+    {
+      "name": "marine_3",
+      "bytes": 59487,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        18,
+        48,
+        164,
+        207
+      ],
+      "sha256": "33306d529a9853c73b21fa21c690097f4844a844da28daca7a097635a7ff7107"
+    },
+    {
+      "name": "marine_4",
+      "bytes": 60297,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        56,
+        48,
+        172,
+        203
+      ],
+      "sha256": "0a2f0c02203f5acbc2d5dcea44050f0a7358dbeb899d98e785abf8019de2b0a6"
+    },
+    {
+      "name": "marine_5",
+      "bytes": 56397,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        76,
+        48,
+        180,
+        203
+      ],
+      "sha256": "ab7d7f55d983cb599e5393b223e2be46e1e2dfcc6a7b8a6ee34d7015a0ab547a"
+    },
+    {
+      "name": "marine_6",
+      "bytes": 59501,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        85,
+        48,
+        217,
+        209
+      ],
+      "sha256": "469726058fc29a1b6fd702131fab20484834a47aaaef0ecbd6d753b950cd2ef3"
+    },
+    {
+      "name": "marine_7",
+      "bytes": 61171,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        92,
+        48,
+        238,
+        207
+      ],
+      "sha256": "3d12887074eaf4221551aba5604d8b5eb0af338ea47f21a70e44710f4c42b8f8"
+    },
+    {
+      "name": "crawler_0",
+      "bytes": 57539,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        72,
+        215,
+        208
+      ],
+      "sha256": "ffa9f2aca8f66da9101d02251fc3593f54b01f12ec37f74a255f2b8f5ee50dfc"
+    },
+    {
+      "name": "crawler_1",
+      "bytes": 54793,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        49,
+        64,
+        207,
+        189
+      ],
+      "sha256": "39ac8bd7584fa7d0eafe844d6eb9baab5bd36c8918a4ce2ebff23acddedf9d7a"
+    },
+    {
+      "name": "crawler_2",
+      "bytes": 57742,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        40,
+        72,
+        194,
+        208
+      ],
+      "sha256": "51cb3457a18a4fc84ce5b334f2b93564dfa932a2e8d895140211144bd0843ee8"
+    },
+    {
+      "name": "crawler_3",
+      "bytes": 56720,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        42,
+        90,
+        187,
+        204
+      ],
+      "sha256": "9c4c1620f4d750e4b62d69e4e6a0f36ed128babd4fb489ecb4a252d4a52c83f2"
+    },
+    {
+      "name": "crawler_4",
+      "bytes": 55910,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        41,
+        87,
+        194,
+        192
+      ],
+      "sha256": "a260230c694ee7cc1e9622131a627a8966cbdc3d7fd1ae64da517e626c001828"
+    },
+    {
+      "name": "crawler_5",
+      "bytes": 55618,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        48,
+        83,
+        207,
+        176
+      ],
+      "sha256": "844cdc3f79368dbaca50170e0deeee1959d8fbcf40eb9c46a309e65189b75a6c"
+    },
+    {
+      "name": "crawler_6",
+      "bytes": 56123,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        87,
+        216,
+        192
+      ],
+      "sha256": "ab892015214409d1dd7f71700e00dc3d6adbe9def15ff3c87186323f18f7e522"
+    },
+    {
+      "name": "crawler_7",
+      "bytes": 56909,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        70,
+        90,
+        214,
+        204
+      ],
+      "sha256": "ba28196b2e1fe4e3c14d2aa49ee383bc7d0aaeb4a6e21be886b91d8325613be9"
+    },
+    {
+      "name": "brute_0",
+      "bytes": 57321,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        72,
+        215,
+        208
+      ],
+      "sha256": "77d38a8fbdb77699666ce49390f96dcb747fb34870276740dffe6f0bfdba8574"
+    },
+    {
+      "name": "brute_1",
+      "bytes": 54687,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        49,
+        65,
+        207,
+        189
+      ],
+      "sha256": "8f1933d19ec452f0292f81084a81c358ccb48a2f6df40715c7cd08fc8d6c0c9e"
+    },
+    {
+      "name": "brute_2",
+      "bytes": 57043,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        41,
+        72,
+        194,
+        208
+      ],
+      "sha256": "e7cc3e455c642d90403afe1e9e4c8d74bcbe7c03f7d39da3052412f9375ad47d"
+    },
+    {
+      "name": "brute_3",
+      "bytes": 56525,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        42,
+        90,
+        187,
+        204
+      ],
+      "sha256": "72e7477cff8cfa1af2b503ac7794955f7955b536d8c05ba5341c0ef540a36d34"
+    },
+    {
+      "name": "brute_4",
+      "bytes": 55870,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        41,
+        87,
+        194,
+        192
+      ],
+      "sha256": "19121e188240a1bc05e16ca4a12fc22fd77cdb377ddd035546397b9c36e62df1"
+    },
+    {
+      "name": "brute_5",
+      "bytes": 55518,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        48,
+        83,
+        207,
+        176
+      ],
+      "sha256": "a57b94a118b7fcc0e5e93e98988488b689e2f6946b7067403f641a4d1052cbe9"
+    },
+    {
+      "name": "brute_6",
+      "bytes": 56039,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        87,
+        216,
+        192
+      ],
+      "sha256": "db12703f0ec181f010dcc5dbe7889bbda1ba37b2296daaf5cba658046ac52e03"
+    },
+    {
+      "name": "brute_7",
+      "bytes": 56879,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        70,
+        90,
+        214,
+        204
+      ],
+      "sha256": "6f1839e0cb9cfe9327b7cb150eecbdf4bf3ac8e5b5e6e6af30d5d2d140232d83"
+    },
+    {
+      "name": "queen_0",
+      "bytes": 61464,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        65,
+        215,
+        208
+      ],
+      "sha256": "82eb0d64ab19f66a1ef7301f3025a05ce8840dea0997d1bd384dbf7231140017"
+    },
+    {
+      "name": "queen_1",
+      "bytes": 60336,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        49,
+        65,
+        207,
+        189
+      ],
+      "sha256": "8544ff4ace5be253881631d645cf65fad80612b6383268495019ad3a04e7bc4a"
+    },
+    {
+      "name": "queen_2",
+      "bytes": 61598,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        41,
+        65,
+        194,
+        208
+      ],
+      "sha256": "7bafd34113e16bf758d3decd3154e41bd7b395e21ffad349f76402aebb44e743"
+    },
+    {
+      "name": "queen_3",
+      "bytes": 59177,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        42,
+        58,
+        192,
+        204
+      ],
+      "sha256": "5b1f5955d2f20cb70f781b3c7a21a394cd32f454a16f1a6702bf92d638efd8a9"
+    },
+    {
+      "name": "queen_4",
+      "bytes": 58349,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        41,
+        61,
+        194,
+        192
+      ],
+      "sha256": "307f678c8b7092cc83e0a9de775f5a7e6b9b957f69c8bb744481fc139fa78439"
+    },
+    {
+      "name": "queen_5",
+      "bytes": 58208,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        48,
+        70,
+        207,
+        176
+      ],
+      "sha256": "77ecfe6da31f651fe61b875f15d00efd4f8a34c9d3199ee2e45aa14b7ae3d0cc"
+    },
+    {
+      "name": "queen_6",
+      "bytes": 58490,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        62,
+        61,
+        215,
+        192
+      ],
+      "sha256": "19525234a564229fe469f1c7696b647bd98bb115b8b8c7c9530ae7ffa11ceac9"
+    },
+    {
+      "name": "queen_7",
+      "bytes": 59177,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        65,
+        59,
+        214,
+        204
+      ],
+      "sha256": "b88b26210321f8b78fbc5f63b37bc892bc94e477790da3ae62bc36dfe239cf7f"
+    },
+    {
+      "name": "wall_y",
+      "bytes": 71654,
+      "size": [
+        256,
+        256
+      ],
+      "mode": "RGBA",
+      "alphaBounds": [
+        47,
+        35,
+        209,
+        204
+      ],
+      "sha256": "75c64a65480178125b1ccbc9e446089269e35f2510d4943842205097e64fbfa2"
+    }
+  ]
+}

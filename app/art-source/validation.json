@@ -1,0 +1,72 @@
+{
+  "asset": "LastFrontier_RelayBeacon",
+  "date": "2026-10-18",
+  "license": "CC0-1.0",
+  "generator": "Blender 4.3.2, local procedural bpy, Cycles CPU 96 samples",
+  "external_sources": [],
+  "png": {
+    "dimensions": [
+      384,
+      384
+    ],
+    "mode": "RGBA",
+    "alpha_range": [
+      0,
+      255
+    ],
+    "nonzero_alpha_bounds": [
+      76,
+      62,
+      308,
+      356
+    ],
+    "visual_review": "Rendered sprite opened and inspected; no clipping; transparent background."
+  },
+  "glb": {
+    "version": 2,
+    "meshes": 1,
+    "material_groups": 7,
+    "materials": 7,
+    "exported_positions": 1320,
+    "triangles": 2428,
+    "bounds_min": [
+      -1.589072823524475,
+      0.0,
+      -1.589072823524475
+    ],
+    "bounds_max": [
+      1.589072823524475,
+      4.109999656677246,
+      1.589072823524475
+    ],
+    "indices_valid": true,
+    "finite_positions": true,
+    "embedded_textures": 0,
+    "normals": "Omitted; glTF importers calculate flat face normals.",
+    "runtime_import_tested": false
+  },
+  "budgets_passed": {
+    "png_dimensions": true,
+    "glb_under_100_KiB": true,
+    "triangles_under_3000": true
+  },
+  "files": {
+    "assets/relay.png": {
+      "bytes": 159944,
+      "sha256": "2d04666544c15412b431ad9827b88ebc22f6f9792636bc4762dfef8fd688325e"
+    },
+    "art-source/relay.blend": {
+      "bytes": 971240,
+      "sha256": "667c8f72ad6c422439b65bad76091caa133344cba8152b7caec6923f6aeb4892"
+    },
+    "art-source/relay.glb": {
+      "bytes": 35644,
+      "sha256": "f82dca6d0237012bf02703fb7ad7d539de416f7a9200371404372418f09334bc"
+    },
+    "scripts/create_relay_blender.py": {
+      "bytes": 9405,
+      "sha256": "97532d14800a2b23bc6114f4c7ccef87f0ee7a68f053ebbd7eca07e0a0f4e1e0"
+    }
+  },
+  "limits": "Static byte inspection and rendered PNG visual review; game-dev CLI unavailable; GLB not imported by current Canvas runtime."
+}

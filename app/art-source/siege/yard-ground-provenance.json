@@ -1,0 +1,20 @@
+{
+  "asset": "assets/siege/yard-ground.webp",
+  "provider": "OpenAI native ImageGen",
+  "created": "2026-10-18",
+  "purpose": "Top-down wet-concrete texture for the industrial yard; projected continuously into the runtime 2:1 ground plane.",
+  "prompt": "A seamless tileable game ground surface texture, perfectly straight orthographic TOP DOWN view, square format 1536x1536. Photorealistic AAA industrial sci-fi factory courtyard floor at night in the rain, for a dark Alien Shooter inspired isometric action game. Only ground material, NO perspective, NO buildings, NO characters, NO guns, NO objects rising from floor, NO UI, NO words. Uneven worn grey concrete paving with small irregular rectangular brick joints and dark charcoal gravel, oil stains, hairline cracks, subtle rusty steel drains embedded flush with ground, scattered small chipped debris. The slabs are small and natural with no large regular square grid. Damp subtle blue steel reflections with muted warm amber reflected patches; no direct light sources, no blown out white areas. Material must read as realistic dense worn factory concrete, overall medium-dark neutral blue-grey, highly detailed, understated and seamless to all four edges. Flat even diffuse lighting, no cast shadows from outside objects. Avoid yellow hazard stripes and obvious repetition.",
+  "source": "/workspace/generated_images/exec-3e93bcb9-1a20-4b33-b2f6-dca96425a2b4.png",
+  "transformations": [
+    "WebP export at quality92 with ImageMagick; no resizing, cropping or visual content edits",
+    "Runtime Canvas projection into 2:1 isometric ground"
+  ],
+  "licenseNote": "New generated imagery; not part of the separate CC0 Blender fallback kit.",
+  "sourceSHA256": "c0d7044994c0815aca61ecebe5816a110ac48fa363ef30e6722a45540e2b3998",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "runtimeSHA256": "a935eb26740f989f0061cb658767ec7b9a0005058b9263c4fa2b61eafd70d2d2",
+  "exportCommand": "magick SOURCE.png -quality 92 assets/siege/yard-ground.webp"
+}

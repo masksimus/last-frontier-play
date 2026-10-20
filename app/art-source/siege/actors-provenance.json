@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "asset": "actors.png",
+  "createdAt": "2026-10-18T14:52:19.069Z",
+  "sourceReference": "User-provided reference image 1000042704.jpg",
+  "sourceReferencePath": "/tmp/codex-remote-attachments/01a14bc6-622f-747d-87e2-02a66f77905c/9a9fe358-8ea2-4510-a0c0-dd4e1e64a9fb/1-1000042704.jpg",
+  "tool": "image_gen.imagegen",
+  "rightsStatement": "Original AI-generated game art produced for this project from the user's provided art direction; no third-party asset license is claimed.",
+  "prompts": [
+    "Using the attached game screenshot only as visual art direction, CREATE AN ACTUAL GAME SPRITE SHEET on fully transparent alpha. This is an original high detail dark industrial mutant shooter asset sheet, not a screenshot or UI mockup. Exactly 3 columns and 2 rows of equal 512×512 cells, total target 1536×1024 landscape. Each character isolated entirely inside its cell with generous transparent margin at all cell borders; no overlapping between cells; all feet visible. Orthographic 3/4 isometric game camera looking slightly down, consistent perspective and detailed realistic pre-rendered 3D / digitally painted game art with strong readable silhouettes. Cool rim lighting on black gunmetal and dark navy armor; warm red emissive implants; textured worn steel and organic flesh. Precise cell contents, left to right: TOP LEFT full body armored space marine aiming assault rifle toward screen right, dark navy heavy armor, orange visor; TOP MIDDLE same marine aiming rifle toward screen left; TOP RIGHT hunched mutated flesh melee humanoid, muscular arms, black iron armor plates, red glowing implants, facing down-left. BOTTOM LEFT full body heavily armored broad cyborg brute, mechanical arms, red glowing chest core, facing down-left. BOTTOM MIDDLE full body giant terrifying cyberdemon titan, huge hunched shoulders, exposed scarred flesh, red core, right arm rotary minigun, facing down-left; its entire body including both feet and minigun contained in cell. BOTTOM RIGHT small hovering military combat drone with armored gunmetal body, twin side thrusters, red center sensor and mounted guns, 3/4 isometric view. Each subject centered with feet near 88% cell height; subjects occupy 65-80% of cell height. No floor, no scenery, no base, no vignette, no text, no numbers, no labels, no UI, no watermark, no frames, no cast shadow, no white or checkerboard background. Real transparent alpha behind all six silhouettes.",
+    "Fix ONLY the sprite-sheet layout of the attached six-character sheet, preserving the same six richly detailed characters and exactly their visual style, materials and poses. Make the output a TRUE TRANSPARENT RGBA alpha sheet, 1536×1024, arranged as exactly 3 columns × 2 rows of equal 512×512 sprite cells. Scale each existing character down to fit fully within its OWN cell's central 390×410 area. IMPORTANT: at least 50 transparent pixels on the LEFT AND RIGHT of every character inside each 512px cell, and at least 45 transparent pixels ABOVE AND BELOW. No single opaque pixel may cross any cell border. In particular, the bottom-center huge minigun demon MUST be reduced in size so that all its guns, spikes, horns, hands and feet fit entirely in its single central-bottom 512×512 cell with large transparent margins. Keep all six full-body silhouettes fully visible. TOP ROW: marine aiming right, marine aiming left, clawed flesh mutant. BOTTOM ROW: armored brute, giant minigun demon, hovering military drone. Consistent orthographic 3/4 isometric view, original gritty realistic rendered game style, dark navy/black worn steel, glowing orange marine visor, red implants and red monster cores. No backdrop, no color wash, no studio environment, no floor, no fog, no UI, no text, no cast shadows: genuinely transparent alpha around isolated subjects."
+  ],
+  "toolReceipt": {
+    "originalOutput": "/workspace/generated_images/exec-6bc4fefa-b381-4c5a-a9bd-e7a73fa63678.png",
+    "selectedOutput": "/workspace/generated_images/exec-c9e8d187-898f-4ca1-8b47-d6bd91293bda.png",
+    "transparent_background": true,
+    "outputFormat": "PNG RGBA",
+    "imageSize": [
+      1536,
+      1024
+    ],
+    "sha256": "f2790d6ece0502bce2c11a0941583f3b941bff7a8d5d8209ebdca7f8b0c90df9",
+    "bytes": 2559830
+  },
+  "validation": {
+    "method": "Pillow inspection only: alpha histogram and connected component bounding boxes. Source image copied byte-for-byte, no raster editing.",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "transparentPixelCount": 860256,
+    "notes": "Custom isolated rectangular source regions are used instead of strict 512px grid cells because the minigun boss extends beyond the requested cell. Each source region excludes all other opaque character silhouettes."
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "createdUtc": "2026-10-18T14:51:48.315540+00:00",
+  "tool": "image_gen__imagegen",
+  "workflow": "Reference-guided original sprite generation followed by a generator layout correction; no provider API keys or paid external generation job.",
+  "userReference": "1000042704.jpg",
+  "referencePath": "/tmp/codex-remote-attachments/01a14bc6-622f-747d-87e2-02a66f77905c/9a9fe358-8ea2-4510-a0c0-dd4e1e64a9fb/1-1000042704.jpg",
+  "generatedSources": [
+    "/workspace/generated_images/exec-759f0b81-91a4-4f83-a8b7-c4c79983cae6.png",
+    "/workspace/generated_images/exec-cb5e380c-0fb6-4287-93b9-d53dd05d24f1.png"
+  ],
+  "runtimeFile": "assets/siege/industry.png",
+  "sha256": "2392b464f5dd8a25e2b542951498230fba7a5a4d127de12f9f68363dd61f130d",
+  "bytes": 2752566,
+  "image": {
+    "mode": "RGBA",
+    "width": 1536,
+    "height": 1024,
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "fullyTransparentPixels": 743235
+  },
+  "validation": {
+    "visuallyInspected": true,
+    "realAlpha": true,
+    "sixIndependentNonOverlappingRects": true,
+    "maxVisibleEdgeAlpha": 1,
+    "allSourceRectsInsideAtlas": true,
+    "sourceRectChecks": {
+      "factory": {
+        "sourceRect": [
+          24,
+          64,
+          508,
+          444
+        ],
+        "visibleAlpha32Bounds": [
+          45,
+          95,
+          469,
+          393
+        ],
+        "edgeMaximumAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "groundContactPixel": [
+          280,
+          480
+        ]
+      },
+      "tower": {
+        "sourceRect": [
+          552,
+          0,
+          456,
+          560
+        ],
+        "visibleAlpha32Bounds": [
+          577,
+          24,
+          406,
+          512
+        ],
+        "edgeMaximumAlpha": [
+          0,
+          1,
+          0,
+          0
+        ],
+        "groundContactPixel": [
+          782,
+          529
+        ]
+      },
+      "container": {
+        "sourceRect": [
+          1024,
+          80,
+          496,
+          476
+        ],
+        "visibleAlpha32Bounds": [
+          1049,
+          123,
+          450,
+          405
+        ],
+        "edgeMaximumAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "groundContactPixel": [
+          1268,
+          520
+        ]
+      },
+      "generator": {
+        "sourceRect": [
+          24,
+          520,
+          512,
+          464
+        ],
+        "visibleAlpha32Bounds": [
+          38,
+          531,
+          474,
+          434
+        ],
+        "edgeMaximumAlpha": [
+          0,
+          1,
+          1,
+          0
+        ],
+        "groundContactPixel": [
+          280,
+          957
+        ]
+      },
+      "barrels": {
+        "sourceRect": [
+          544,
+          576,
+          464,
+          408
+        ],
+        "visibleAlpha32Bounds": [
+          563,
+          605,
+          413,
+          358
+        ],
+        "edgeMaximumAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "groundContactPixel": [
+          771,
+          952
+        ]
+      },
+      "railing": {
+        "sourceRect": [
+          1024,
+          576,
+          496,
+          408
+        ],
+        "visibleAlpha32Bounds": [
+          1027,
+          605,
+          476,
+          357
+        ],
+        "edgeMaximumAlpha": [
+          1,
+          0,
+          0,
+          0
+        ],
+        "groundContactPixel": [
+          1269,
+          952
+        ]
+      }
+    }
+  },
+  "limits": "Single view per prop; PNG is a rendered isometric sprite atlas, not a 3D mesh. Small external lighting glows may have alpha 1 in padding. Maximum alpha 254 is source generator output and is retained unchanged."
+}

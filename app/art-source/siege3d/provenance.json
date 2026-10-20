@@ -1,0 +1,88 @@
+{
+  "source": "scripts/create_siege3d_models.py",
+  "externalAssets": false,
+  "paidGeneration": false,
+  "reference": "User supplied industrial siege composition; original geometry authored procedurally.",
+  "models": [
+    {
+      "name": "marine",
+      "file": "marine.glb",
+      "bytes": 501044,
+      "sha256": "30e3f5e90fca57c66f56fe022188c4d28b52108ab9a82c1530b293cc029dae7a",
+      "triangles": 9480,
+      "bones": 17,
+      "animations": [
+        "idle",
+        "walk",
+        "fire",
+        "reload",
+        "death"
+      ],
+      "heightMeters": 1.95,
+      "license": "CC0-1.0",
+      "authoringForward": "+X",
+      "authoringUp": "+Z",
+      "runtimeUp": "+Y"
+    },
+    {
+      "name": "crawler",
+      "file": "crawler.glb",
+      "bytes": 441480,
+      "sha256": "d6de77aa74c726286830cf1e275386caa715405370a3575c686a5938a989d0ed",
+      "triangles": 8064,
+      "bones": 17,
+      "animations": [
+        "idle",
+        "walk",
+        "fire",
+        "reload",
+        "death"
+      ],
+      "heightMeters": 2.028,
+      "license": "CC0-1.0",
+      "authoringForward": "+X",
+      "authoringUp": "+Z",
+      "runtimeUp": "+Y"
+    },
+    {
+      "name": "brute",
+      "file": "brute.glb",
+      "bytes": 515368,
+      "sha256": "c369891c2696ae7b37415e05bbe04e2796770963329d8f9b031338a767b9ec3b",
+      "triangles": 9484,
+      "bones": 17,
+      "animations": [
+        "idle",
+        "walk",
+        "fire",
+        "reload",
+        "death"
+      ],
+      "heightMeters": 2.691,
+      "license": "CC0-1.0",
+      "authoringForward": "+X",
+      "authoringUp": "+Z",
+      "runtimeUp": "+Y"
+    },
+    {
+      "name": "queen",
+      "file": "queen.glb",
+      "bytes": 515420,
+      "sha256": "371c8a4baf51bd250a2b5f011128a2b3b641398f34e9cf0f441257ab0d640993",
+      "triangles": 9484,
+      "bones": 17,
+      "animations": [
+        "idle",
+        "walk",
+        "fire",
+        "reload",
+        "death"
+      ],
+      "heightMeters": 4.718999999999999,
+      "license": "CC0-1.0",
+      "authoringForward": "+X",
+      "authoringUp": "+Z",
+      "runtimeUp": "+Y"
+    }
+  ]
+}

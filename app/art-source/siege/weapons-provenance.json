@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "asset": "weapons.png",
+  "createdAt": "2026-10-18T15:01:41.316Z",
+  "sourceReference": "User-provided reference image 1000042704.jpg",
+  "sourceReferencePath": "/tmp/codex-remote-attachments/01a14bc6-622f-747d-87e2-02a66f77905c/9a9fe358-8ea2-4510-a0c0-dd4e1e64a9fb/1-1000042704.jpg",
+  "tool": "image_gen.imagegen",
+  "prompt": "Create an ORIGINAL game-ready HUD WEAPON ICON ATLAS matching the realistic dark industrial science-fiction materials of the provided reference. Exactly 2 columns × 2 rows, total 1536×1024 landscape, each equal cell 768×512. REAL TRANSPARENT ALPHA BACKGROUND around each weapon, not dark colored panels. All four guns strictly SIDE PROFILE, their MUZZLES POINTING RIGHT, fully visible including stock, barrel and grip, no hands. TOP LEFT: compact powerful futuristic military pistol with steel slide and dark grip. TOP RIGHT: long rugged pump-action combat shotgun, dark gunmetal with subtle worn bronze trim. BOTTOM LEFT: heavy tactical assault rifle, stock on left and muzzle on right, detailed receiver, magazine, rail and realistic steel barrel, warm metallic/gold accents. BOTTOM RIGHT: bulky futuristic plasma cannon with thick barrel, layered metal armor, cyan energy coil, exposed mechanical details. Each silhouette centered in its own 768×512 cell with at least 70px TRANSPARENT PADDING all around, no touching borders, no overlap between cells. Sharp realistic high detail pre-rendered 3D asset appearance, subtle studio rim lighting, scratched weathered gunmetal steel and gold highlights, readable silhouette at small size. Original weapon designs. No cast shadows, no floor, no scene, no background gradients, no UI frames, no text, no labels, no watermark, no ammunition icons, no bullets, no explosions, no hands or soldiers. These are isolated inventory icons for the bottom weapon bar of the game.",
+  "rightsStatement": "Original AI-generated game art produced for this project from the user's provided art direction; no third-party asset license is claimed.",
+  "toolReceipt": {
+    "output": "/workspace/generated_images/exec-ba2e5eb1-a891-4089-9995-a01ae203c591.png",
+    "transparent_background": true,
+    "outputFormat": "PNG RGBA",
+    "imageSize": [
+      1536,
+      1024
+    ],
+    "sha256": "4d53f1a8d3ecbe204e3a79a42a5b51d21e2a28e9e44943546e22e75472051dd5",
+    "bytes": 1945242
+  },
+  "validation": {
+    "method": "Pillow inspection only: alpha histogram and connected component bounding boxes. PNG copied byte-for-byte, no raster editing.",
+    "alphaExtrema": [
+      0,
+      254
+    ],
+    "transparentPixelCount": 1115401,
+    "notes": "Four isolated custom source rectangles exclude all other opaque weapon silhouettes. Side-profile weapons all face right; no text/UI baked into art."
+  }
+}

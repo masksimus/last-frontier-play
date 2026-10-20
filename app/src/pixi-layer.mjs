@@ -87,7 +87,7 @@ async function init(){
       dot.position.set(cx,cy);dot.width=boom?5:3;dot.height=boom?5:3;
       dot.tint=boom?(Math.random()<.5?0xffbb61:0xff613f):0x7ceaff;
       fxLayer.addChild(dot);
-      particles.push({dot,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,ttl,life:ttl});
+      particles.push({dot,x:event.x,y:event.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,ttl,life:ttl});
     }
     status.bursts++;
   }
@@ -99,7 +99,8 @@ async function init(){
     }
     for(let i=particles.length-1;i>=0;i--){
       const p=particles[i];p.life-=dt;
-      p.dot.x+=p.vx*dt;p.dot.y+=p.vy*dt;
+      p.x+=p.vx*dt;p.y+=p.vy*dt;
+      p.dot.position.set(p.x-cameraX,p.y-cameraY);
       p.vx*=.94;p.vy*=.94;
       p.dot.alpha=Math.max(0,p.life/p.ttl);
       if(p.life<=0){p.dot.destroy();particles.splice(i,1);}

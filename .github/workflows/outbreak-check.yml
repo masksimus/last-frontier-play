@@ -1,0 +1,63 @@
+name: Outbreak game and browser verification
+on:
+  push:
+    paths: ['app/**', '.github/workflows/outbreak-check.yml']
+  pull_request:
+    paths: ['app/**', '.github/workflows/outbreak-check.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: outbreak-check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        renderer: [canvas]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify tests, portable build and archive
+        working-directory: app
+        run: npm run verify
+      - name: Install and build bundled open source renderer and audio
+        if: matrix.renderer == 'pixi'
+        working-directory: app
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build:vite
+          npm run verify:dist
+      - name: Install Chromium browser checks
+        run: |
+          python3 -m pip install --disable-pip-version-check playwright==1.56.0
+          python3 -m playwright install --with-deps chromium
+      - name: Verify desktop, touch and campaign transitions
+        env:
+          FRONTIER_REQUIRE_PIXI: ${{ matrix.renderer == 'pixi' && '1' || '0' }}
+        run: python3 app/tests/test_outbreak_browser.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-frontier-outbreak-${{ matrix.renderer }}
+          path: |
+            app/last-frontier-release.zip
+            app/dist/build-manifest.json
+            app/docs/OUTBREAK_BROWSER_RESULTS.json
+            app/docs/screenshots/outbreak-*.png
+            app/docs/screenshots/siege-*.png
+            app/docs/screenshots/motion-*.png
+            app/docs/videos/*.webm
+            app/package-lock.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,21 @@
+LAST FRONTIER — ORIGINAL SIEGE AUDIO
+
+Files: rifle.wav, pistol.wav, shotgun.wav, plasma.wav, reload.wav,
+grenade.wav, ambience.wav, music.wav.
+
+These eight files were generated specifically for Last Frontier from original
+procedural synthesis and composition in scripts/create_siege_audio.py. No
+third-party recordings, samples, sound fonts, existing tracks, or external
+generation services were used. The script uses deterministic noise, oscillators,
+envelopes, filters, layered reflections, and an original 16-bar musical sequence.
+Rebuild with: python3 scripts/create_siege_audio.py
+Format: 22050 Hz, mono, signed 16-bit PCM WAV.
+
+To the extent copyright and related rights exist, these eight audio files and
+their original synthesis/composition are dedicated to the public domain under
+CC0 1.0 Universal. You may use, modify, and distribute them commercially without
+attribution. No warranties are provided.
+https://creativecommons.org/publicdomain/zero/1.0/
+
+This dedication does not change the licenses of existing shot.wav, hit.wav,
+boom.wav, pickup.wav, software libraries, or other project assets.

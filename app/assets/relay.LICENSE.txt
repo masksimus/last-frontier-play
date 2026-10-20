@@ -1,0 +1,11 @@
+Relay beacon asset and procedural generator
+Copyright 2026 Last Frontier contributors
+SPDX-License-Identifier: CC0-1.0
+
+The relay.png image, relay.glb mesh and create_relay_blender.py generator are
+dedicated to the public domain under CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+Created procedurally in Blender 4.3.2 using local geometry and materials.
+No external models, textures, provider-generated images or paid APIs were used.
+Editable scene and validation receipt: app/art-source/.
