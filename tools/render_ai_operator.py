@@ -3,7 +3,7 @@
 Run: blender --background --python tools/render_ai_operator.py
 Only preview PNGs are committed, never changes to the original source GLB.
 """
-import bpy, math, json
+import bpy, math, json, statistics
 from mathutils import Vector
 
 SRC = "app/public/models/characters/tactical_operator.glb"
@@ -24,13 +24,34 @@ for obj in objects:
 scene = bpy.context.scene
 # Bound the actual geometry, not the empty armature origin.
 deps = bpy.context.evaluated_depsgraph_get()
-bounds = [o.matrix_world @ Vector(c) for o in objects for c in o.bound_box]
+def corners(mesh):
+    return [mesh.matrix_world @ Vector(c) for c in mesh.bound_box]
+def bbox(mesh):
+    pp=corners(mesh)
+    a=Vector([min(v[i] for v in pp) for i in range(3)])
+    b=Vector([max(v[i] for v in pp) for i in range(3)])
+    return (a,b)
+centres={o:(bbox(o)[0]+bbox(o)[1])*.5 for o in objects}
+median=Vector([statistics.median([c[i] for c in centres.values()]) for i in range(3)])
+core=[]
+excluded=[]
+for o in objects:
+    a,b=bbox(o);dimension=b-a
+    distance=max(abs(v) for v in (centres[o]-median))
+    if max(dimension)<4.0 and distance<8.0:
+        core.append(o)
+    else:
+        excluded.append((o.name,round(distance,3),[round(v,3) for v in dimension]))
+        o.hide_render=True
+assert len(core)>=8, 'Cannot find a coherent body cluster'
+print('CORE_COUNT',len(core),'EXCLUDED',excluded,'MEDIAN',list(median))
+bounds=[p for o in core for p in corners(o)]
 mins = Vector([min(v[i] for v in bounds) for i in range(3)])
 maxs = Vector([max(v[i] for v in bounds) for i in range(3)])
 center = (mins+maxs)*.5
 size = maxs-mins
 height=max(size.z,0.1)
-print("Extent in meters",tuple(round(x,3) for x in size))
+print("Cluster extent in metres",tuple(round(x,3) for x in size))
 # Auto rescale a character to a 1.8 metre standard height without affecting source GLB.
 scale = 1.80/height
 for o in list(scene.objects):
@@ -38,12 +59,12 @@ for o in list(scene.objects):
         o.scale *= scale
         o.location = (o.location-center)*scale
 bpy.context.view_layer.update()
-bnds = [o.matrix_world @ Vector(c) for o in objects for c in o.bound_box]
+bnds = [p for o in core for p in corners(o)]
 min_z=min(p.z for p in bnds)
 for o in list(scene.objects):
     if o.parent is None and o.type not in {'LIGHT','CAMERA'}:o.location.z-=min_z
 bpy.context.view_layer.update()
-bounds = [o.matrix_world @ Vector(c) for o in objects for c in o.bound_box]
+bounds = [p for o in core for p in corners(o)]
 mins = Vector([min(v[i] for v in bounds) for i in range(3)])
 maxs = Vector([max(v[i] for v in bounds) for i in range(3)])
 middle=(mins+maxs)*.5
@@ -102,7 +123,7 @@ for label,location in views:
     bpy.ops.render.render(write_still=True)
     print("RENDERED",scene.render.filepath)
 report={"source":"https://github.com/cktang88/3d-fps/blob/main/public/assets/models/characters/soldier_tac.glb",
-        "license":"CC BY 4.0 original character DanlyVostok","objects":len(objects),
+        "license":"CC BY 4.0 original character DanlyVostok","objects":len(objects),"body_objects":len(core),"excluded":excluded,
         "armatures":len(root),
         "measured_m":[round(v,3) for v in size],
         "final_dimensions_m":[round(v,3) for v in maxs-mins],
