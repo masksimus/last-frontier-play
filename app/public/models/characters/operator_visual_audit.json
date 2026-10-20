@@ -1,0 +1,21 @@
+{
+  "source": "https://github.com/cktang88/3d-fps/blob/main/public/assets/models/characters/soldier_tac.glb",
+  "license": "CC BY 4.0 original character DanlyVostok",
+  "objects": 16,
+  "armatures": 1,
+  "measured_m": [
+    10.239,
+    50.035,
+    2883.587
+  ],
+  "final_dimensions_m": [
+    0.006,
+    0.031,
+    1.8
+  ],
+  "renders": [
+    "front",
+    "threequarter",
+    "back"
+  ]
+}
