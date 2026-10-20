@@ -2,15 +2,36 @@
   "source": "https://github.com/cktang88/3d-fps/blob/main/public/assets/models/characters/soldier_tac.glb",
   "license": "CC BY 4.0 original character DanlyVostok",
   "objects": 16,
+  "body_objects": 14,
+  "excluded": [
+    [
+      "Object_121",
+      2.435,
+      [
+        8.838,
+        2.972,
+        7.563
+      ]
+    ],
+    [
+      "Icosphere",
+      2876.37,
+      [
+        1.902,
+        2.0,
+        2.0
+      ]
+    ]
+  ],
   "armatures": 1,
   "measured_m": [
-    10.239,
-    50.035,
-    2883.587
+    0.986,
+    0.8,
+    2.284
   ],
   "final_dimensions_m": [
-    0.006,
-    0.031,
+    0.777,
+    0.631,
     1.8
   ],
   "renders": [
