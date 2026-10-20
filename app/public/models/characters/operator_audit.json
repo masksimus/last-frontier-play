@@ -1,0 +1,22 @@
+{
+  "tactical_operator.glb": {
+    "bytes": 4532132,
+    "meshes": 15,
+    "nodes": 110,
+    "materials": 7,
+    "skins": 1,
+    "animations": 0,
+    "images": 19,
+    "textures": 19
+  },
+  "tactical_operator_rig.glb": {
+    "bytes": 3094592,
+    "meshes": 1,
+    "nodes": 87,
+    "materials": 11,
+    "skins": 1,
+    "animations": 50,
+    "images": 0,
+    "textures": 0
+  }
+}
