@@ -90,3 +90,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+
+## Three.js (operator 3D preview)
+
+The operator preview uses Three.js version 0.180.0, bundled locally with the
+OrbitControls, GLTFLoader and GLTFExporter add-ons. Three.js is licensed under
+the MIT License (Copyright © 2010–2026 three.js authors). The full license
+text accompanies the bundle at `public/vendor/three-LICENSE.txt`.
+Source: https://github.com/mrdoob/three.js

@@ -1,0 +1,39 @@
+name: Bundle Three.js operator viewer for offline startup
+on:
+  push:
+    branches: [ai/fix-operator-headset-20261020]
+    paths:
+      - .github/workflows/operator-vendor.yml
+      - app/scripts/operator_vendor_entry.mjs
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build local open-source Three.js bundle
+        run: |
+          npm install --prefix app --no-save --no-audit --no-fund three@0.180.0
+          mkdir -p app/public/vendor
+          cd app
+          ./node_modules/.bin/esbuild scripts/operator_vendor_entry.mjs --bundle --minify --format=esm --target=es2020 --outfile=public/vendor/three-viewer.js
+          cp node_modules/three/LICENSE public/vendor/three-LICENSE.txt
+          test $(wc -c < public/vendor/three-viewer.js) -gt 200000
+          grep -q 'MIT' public/vendor/three-LICENSE.txt
+      - name: Save self-contained browser engine for published GLB viewer
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f app/public/vendor/three-viewer.js app/public/vendor/three-LICENSE.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "vendor: bundle three.js for reliable mobile 3D viewing"
+            git fetch origin ai/fix-operator-headset-20261020
+            git rebase origin/ai/fix-operator-headset-20261020
+            git push origin HEAD:ai/fix-operator-headset-20261020
+          fi

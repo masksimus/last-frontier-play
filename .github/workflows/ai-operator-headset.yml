@@ -1,0 +1,105 @@
+name: Operator headset viewer verification
+on:
+  push:
+    branches: [ai/fix-operator-headset-20261020]
+    paths:
+      - .github/workflows/ai-operator-headset.yml
+      - app/public/operator-preview.html
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JS syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path('app/public/operator-preview.html').read_text()
+          assert 'function correctHeadset(root)' in html
+          assert 'original.applyBoneTransform(i,p)' in html
+          assert 'head.attach(fixed)' in html
+          assert 'new THREE.Vector3(0,-0.12,0)' in html
+          assert 'GLTFExporter' in html
+          Path('/tmp/operator-preview.mjs').write_text(html.split('<script type="module">',1)[1].split('</script>',1)[0])
+          PY
+          node --check /tmp/operator-preview.mjs
+      - name: Unit tests and production build
+        run: |
+          npm install --prefix app --no-audit --no-fund
+          npm --prefix app run test
+          npm --prefix app run build
+          test -s app/dist/operator-preview.html
+          test -s app/dist/models/characters/tactical_operator.glb
+      - name: Install headless Chrome for real WebGL smoke and GLB export
+        run: |
+          npm install --prefix app --no-save --no-audit --no-fund playwright
+          cd app
+          npx playwright install --with-deps chromium
+      - name: Render on phone-size viewport, compare and export GLB
+        working-directory: app
+        run: |
+          npx vite --host 127.0.0.1 --port 5173 > /tmp/operator-vite.log 2>&1 &
+          for i in $(seq 1 25); do curl -fsS http://127.0.0.1:5173/operator-preview.html >/dev/null && break || sleep 1; done
+          node --input-type=module <<'JS'
+          import {chromium} from 'playwright';
+          import {statSync,readFileSync,writeFileSync} from 'node:fs';
+          const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
+          const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,acceptDownloads:true});
+          page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
+          page.on('requestfailed',r=>console.log('REQUEST_FAILED',r.url(),r.failure()?.errorText));
+          page.on('response',r=>{if(r.url().includes('operator-preview')||r.url().includes('three-viewer')||r.url().includes('tactical_operator'))console.log('HTTP',r.status(),r.url())});
+          page.on('console',m=>console.log('BROWSER_CONSOLE',m.type(),m.text()));
+          try{
+            await page.goto('http://127.0.0.1:5173/operator-preview.html',{waitUntil:'domcontentloaded',timeout:90000});
+            await page.waitForTimeout(9000);
+            console.log('ACTUAL_STATUS',await page.locator('#status').innerText(),'pageTitle',await page.title());
+            console.log('LOADED_RESOURCES',await page.evaluate(()=>performance.getEntriesByType('resource').filter(x=>x.name.includes('three-viewer')||x.name.includes('tactical_operator')).map(x=>({name:x.name,duration:x.duration}))));
+            await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('Гарнитура опущена'),null,{timeout:20000});
+            const fixed=await page.locator('#status').innerText();
+            await page.screenshot({path:'public/models/characters/operator_headset_fixed_browser.png'});
+            await page.locator('#detailed').click();
+            await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('GLB загружен'),null,{timeout:90000});
+            const unmodified=await page.locator('#status').innerText();
+            await page.screenshot({path:'public/models/characters/operator_headset_original_browser.png'});
+            await page.locator('#fixed').click();
+            await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('Гарнитура опущена'),null,{timeout:90000});
+            const dlWait=page.waitForEvent('download',{timeout:90000});
+            await page.locator('#download').click();
+            const download=await dlWait;
+            await download.saveAs('/tmp/tactical_operator_headset_fixed.glb');
+            const glb=readFileSync('/tmp/tactical_operator_headset_fixed.glb');
+            if(glb.subarray(0,4).toString()!=='glTF'||glb.readUInt32LE(8)!==glb.length||glb.length<1000000)
+              throw Error('Invalid GLB export '+glb.length);
+            const jsonChunkSize=glb.readUInt32LE(12);
+            if(glb.subarray(16,20).toString()!=='JSON')throw Error('GLB JSON chunk missing');
+            const doc=JSON.parse(glb.subarray(20,20+jsonChunkSize).toString());
+            if((doc.meshes?.length||0)<12||(doc.images?.length||0)<5||(doc.skins?.length||0)<1
+               ||!doc.nodes.some(n=>n.name==='Headphones_corrected')){
+               throw Error('Fixed GLB missing character, textures, skin or corrected headset');
+            }
+            writeFileSync('public/models/characters/tactical_operator_headset_fixed.glb',glb);
+            writeFileSync('public/models/characters/headset_browser_report.json',
+              JSON.stringify({fixed_status:fixed,original_status:unmodified,exported_bytes:glb.length,
+              user_agent:await page.evaluate(()=>navigator.userAgent),
+              screenshots:['operator_headset_fixed_browser.png','operator_headset_original_browser.png']},null,2));
+            console.log('WEBGL_AND_GLB_EXPORT_SUCCESS',fixed,glb.length);
+          }finally{await browser.close()}
+          JS
+      - name: Save verified browser screenshots and export report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f app/public/models/characters/tactical_operator_headset_fixed.glb app/public/models/characters/operator_headset_fixed_browser.png app/public/models/characters/operator_headset_original_browser.png app/public/models/characters/headset_browser_report.json
+          if ! git diff --cached --quiet; then
+            git commit -m "test: record actual Chrome render and successful headset GLB export"
+            git fetch origin ai/fix-operator-headset-20261020
+            git rebase origin/ai/fix-operator-headset-20261020
+            git push origin HEAD:ai/fix-operator-headset-20261020
+          fi
