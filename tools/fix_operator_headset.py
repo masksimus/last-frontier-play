@@ -18,13 +18,13 @@ def parse_glb(path):
     g=json.loads(d[20:20+n].decode("utf8"))
     pos=20+n
     size,t=struct.unpack_from("<I4s",d,pos)
-    assert t==b"BIN\\x00".replace(b"\x00",b"\x00") or t==b"BIN\\x00", repr(t)
+    assert t==b"BIN\x00", repr(t)
     return g,bytearray(d[pos+8:pos+8+size])
 def glb_write(path,g,b):
     a=json.dumps(g,ensure_ascii=False,separators=(",",":")).encode("utf8")
     a+=b" " * ((-len(a))%4)
     b+=b"\x00"*((-len(b))%4)
-    payload=struct.pack("<I4s",len(a),b"JSON")+a+struct.pack("<I4s",len(b),b"BIN\\x00")+b
+    payload=struct.pack("<I4s",len(a),b"JSON")+a+struct.pack("<I4s",len(b),b"BIN\x00")+b
     path.write_bytes(struct.pack("<4sII",b"glTF",2,12+len(payload))+payload)
 def meshes_geometry(path):
     bpy.ops.object.select_all(action="SELECT")
@@ -89,7 +89,6 @@ for k in before:
     assert k in after,("Unrelated mesh removed",k)
     displacement=max(abs(after[k]["center"][i]-before[k]["center"][i]) for i in range(3))
     assert displacement<1e-3,("Unrelated geometry moved",k,displacement)
-head_name,head=mesh_with_material(after,"mil_suit_r5_head") if False else ("Object_97",after.get("Object_97",{}))
 report={"source":SRC.name,"fixed_file":DST.name,"modified_mesh":source_name,
         "modified_material":"HeadphonesT","accessor":pos_acc,"vertices_changed":count,
         "glTF_downward_m":TARGET_LOWER_METRES,
