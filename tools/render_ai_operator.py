@@ -17,6 +17,10 @@ if not objects:
     raise ValueError("No renderable mesh in tactical_operator.glb")
 root = [o for o in bpy.context.scene.objects if o.type == 'ARMATURE']
 print("Found",len(objects),"meshes",len(root),"armatures")
+for obj in objects:
+    local_points=[obj.matrix_world @ Vector(c) for c in obj.bound_box]
+    dimensions=[round(max(p[i] for p in local_points)-min(p[i] for p in local_points),3) for i in range(3)]
+    print('MESH_BOUNDS',obj.name,dimensions,'hide_render',obj.hide_render)
 scene = bpy.context.scene
 # Bound the actual geometry, not the empty armature origin.
 deps = bpy.context.evaluated_depsgraph_get()
@@ -78,7 +82,9 @@ scene.collection.objects.link(cam);scene.camera=cam
 dat.type='ORTHO';dat.ortho_scale=2.75
 scene.render.engine='CYCLES'
 scene.cycles.samples=24
-scene.cycles.use_denoising=True
+scene.cycles.use_denoising=False
+for vl in scene.view_layers:
+    if hasattr(vl, 'cycles'):vl.cycles.use_denoising=False
 scene.render.resolution_x=540
 scene.render.resolution_y=720
 scene.render.resolution_percentage=100
