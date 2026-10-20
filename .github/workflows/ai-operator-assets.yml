@@ -1,0 +1,65 @@
+name: AI operator - import licensed GLB
+on:
+  push:
+    branches:
+      - ai/tactical-operator-real-mesh
+    paths:
+      - .github/workflows/ai-operator-assets.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ai/tactical-operator-real-mesh
+      - name: Download openly licensed real soldier meshes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/public/models/characters
+          curl --fail --location --retry 4 --retry-all-errors --max-time 180 \
+            -o app/public/models/characters/tactical_operator.glb \
+            https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb
+          curl --fail --location --retry 4 --retry-all-errors --max-time 180 \
+            -o app/public/models/characters/tactical_operator_rig.glb \
+            https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier.glb
+      - name: Audit binary GLB headers, mesh and animation data
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,struct,json
+          root=pathlib.Path('app/public/models/characters')
+          out={}
+          for filename in ('tactical_operator.glb','tactical_operator_rig.glb'):
+              p=root/filename
+              data=p.read_bytes()
+              assert data[:4]==b'glTF',f'{filename}: missing glTF header'
+              version,total=struct.unpack_from('<II',data,4)
+              assert version==2 and total==len(data),f'{filename}: corrupt GLB'
+              length,kind=struct.unpack_from('<I4s',data,12)
+              assert kind==b'JSON',f'{filename}: missing JSON chunk'
+              doc=json.loads(data[20:20+length].decode('utf-8'))
+              info={'bytes':len(data),'meshes':len(doc.get('meshes',[])),
+                'nodes':len(doc.get('nodes',[])),'materials':len(doc.get('materials',[])),
+                'skins':len(doc.get('skins',[])),'animations':len(doc.get('animations',[])),
+                'images':len(doc.get('images',[])),'textures':len(doc.get('textures',[]))}
+              assert info['meshes']>0,f'{filename}: no 3D mesh'
+              out[filename]=info
+              print(filename,info)
+          (root/'operator_audit.json').write_text(json.dumps(out,indent=2),encoding='utf-8')
+          PY
+      - name: Commit validated assets to feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f app/public/models/characters/tactical_operator.glb app/public/models/characters/tactical_operator_rig.glb app/public/models/characters/operator_audit.json
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: import licensed tactical operator and rigged soldier GLB"
+            git push origin HEAD:ai/tactical-operator-real-mesh
+          fi
