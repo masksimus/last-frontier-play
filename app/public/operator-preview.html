@@ -25,10 +25,7 @@
     #progress{position:absolute;bottom:0;left:0;height:3px;background:#b5dfc3;width:0;transition:width .15s}
     @media(min-width:770px){.top{left:28px;top:28px}.panel{max-width:470px;left:auto;right:28px;bottom:28px}h1{font-size:30px}}
   </style>
-  <script type="importmap">
-    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
-    "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
-  </script>
+
 </head>
 <body>
  <canvas id="view"></canvas>
@@ -51,10 +48,7 @@
    <div id="progress"></div>
  </section>
  <script type="module">
-   import * as THREE from 'three';
-   import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-   import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-   import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
+   import {THREE,OrbitControls,GLTFLoader,GLTFExporter} from './vendor/three-viewer.js';
    const cvs=document.getElementById('view');
    const status=document.getElementById('status');
    const camera=new THREE.PerspectiveCamera(42,1,.02,120);
