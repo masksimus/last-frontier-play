@@ -1,0 +1,43 @@
+name: AI operator - verify mobile asset package
+on:
+  push:
+    branches: [ai/tactical-operator-real-mesh]
+    paths:
+      - .github/workflows/ai-operator-verify.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies and run game unit tests
+        run: |
+          npm install --prefix app --no-audit --no-fund
+          npm --prefix app run test
+      - name: Build production bundle and verify 3D assets
+        run: |
+          npm --prefix app run build
+          test -s app/dist/operator-preview.html
+          test -s app/dist/models/characters/tactical_operator.glb
+          test -s app/dist/models/characters/tactical_operator_rig.glb
+          test -s app/dist/models/characters/tactical_operator_front.png
+          test -s app/dist/models/characters/tactical_operator_threequarter.png
+          test -s app/dist/models/characters/tactical_operator_back.png
+          python3 - <<'PY'
+          import json,pathlib,struct
+          root=pathlib.Path('app/dist/models/characters')
+          report=json.loads((root/'operator_audit.json').read_text())
+          for name,record in report.items():
+              file=root/name
+              blob=file.read_bytes()
+              assert blob[:4]==b'glTF' and struct.unpack_from('<I',blob,8)[0]==len(blob)
+              assert len(blob)==record['bytes']
+              print('PASS',name,len(blob),record['meshes'],'meshes')
+          print('PASS mobile viewer, PNG previews, both GLBs, production packaging')
+          PY
