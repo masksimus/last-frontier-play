@@ -47,13 +47,14 @@
    <div class="download"><a class="btn" id="download" download="tactical_operator.glb"
       href="./models/characters/tactical_operator.glb">Скачать GLB</a></div>
    <div class="small">3D-геометрия и текстуры — DanlyVostok (CC BY 4.0). Скелетная модель — BAMEN (CC BY 4.0).
-      Гарнитура опущена до уровня шлема; оригинал доступен для сравнения. Модели пока не объединены и не являются финальным AAA-персонажем.</div>
+      Исправление гарнитуры выполняется в 3D-просмотрщике: она опускается и закрепляется на голове. Исходный GLB не меняется. Модели пока не являются финальным AAA-персонажем.</div>
    <div id="progress"></div>
  </section>
  <script type="module">
    import * as THREE from 'three';
    import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
    import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+   import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
    const cvs=document.getElementById('view');
    const status=document.getElementById('status');
    const camera=new THREE.PerspectiveCamera(42,1,.02,120);
@@ -75,9 +76,9 @@
    const ground=new THREE.Mesh(new THREE.CircleGeometry(2.7,96),new THREE.MeshStandardMaterial({color:0x283b39,roughness:.96}));
    ground.rotation.x=-Math.PI/2;ground.position.y=-.013;scene.add(ground);
    const grid=new THREE.GridHelper(9,36,0x49615c,0x2c3e3d);grid.position.y=-.011;scene.add(grid);
-   let obj=null,mixer=null,clips=[],paused=false,generation=0;
+   let obj=null,mixer=null,clips=[],paused=false,generation=0,activeKind='fixed';
    const clock=new THREE.Clock();const loader=new GLTFLoader();
-   const paths={fixed:'./models/characters/tactical_operator_headset_fixed.glb',detailed:'./models/characters/tactical_operator.glb',animated:'./models/characters/tactical_operator_rig.glb'};
+   const paths={fixed:'./models/characters/tactical_operator.glb',detailed:'./models/characters/tactical_operator.glb',animated:'./models/characters/tactical_operator_rig.glb'};
    const animArea=document.getElementById('animArea'),select=document.getElementById('clip');
    function frameModel(mesh){
      mesh.updateMatrixWorld(true);
@@ -113,6 +114,49 @@
      camera.near=.01;camera.far=70;camera.updateProjectionMatrix();
      controls.update();
    }
+
+   // HeadphonesT is a separately skinned mesh in the source GLB. Bake its current
+   // skinned pose to ordinary vertices, attach it to the head bone, then shift it
+   // in WORLD space. This avoids damaging the other 14 meshes or the skeleton.
+   function correctHeadset(root){
+     root.updateMatrixWorld(true);
+     let corrected=0;
+     const candidates=[];
+     root.traverse(m=>{
+       if(m.isSkinnedMesh && (Array.isArray(m.material)?m.material:[m.material]).some(mat=>/headphonest/i.test(mat?.name||'')))candidates.push(m);
+     });
+     for(const original of candidates){
+       original.skeleton.update();
+       const geo=original.geometry.clone();
+       const pos=geo.getAttribute('position');
+       const p=new THREE.Vector3();
+       for(let i=0;i<pos.count;i++){
+         p.fromBufferAttribute(pos,i);
+         original.applyBoneTransform(i,p);
+         pos.setXYZ(i,p.x,p.y,p.z);
+       }
+       pos.needsUpdate=true;
+       geo.deleteAttribute('skinIndex');geo.deleteAttribute('skinWeight');
+       geo.computeBoundingBox();geo.computeBoundingSphere();
+       const fixed=new THREE.Mesh(geo,original.material);
+       fixed.name='Headphones_corrected';
+       fixed.position.copy(original.position);
+       fixed.quaternion.copy(original.quaternion);
+       fixed.scale.copy(original.scale);
+       original.parent.add(fixed);
+       fixed.updateMatrixWorld(true);
+       const head=original.skeleton.bones.find(b=>/head/i.test(b.name)&&!/headtop/i.test(b.name));
+       if(head)head.attach(fixed);
+       const worldPos=fixed.getWorldPosition(new THREE.Vector3());
+       const lowered=worldPos.clone().add(new THREE.Vector3(0,-0.12,0));
+       fixed.position.copy(fixed.parent.worldToLocal(lowered));
+       fixed.updateMatrixWorld(true);
+       original.visible=false;
+       corrected++;
+     }
+     if(!corrected)throw new Error('Не найден отдельный меш наушников');
+     return corrected;
+   }
    function startClip(idx){
      if(!mixer)return;
      mixer.stopAllAction();
@@ -125,6 +169,7 @@
      Object.keys(paths).forEach(k=>document.getElementById(k).classList.toggle('active',k===kind));
      document.getElementById('download').href=paths[kind];
      document.getElementById('download').download=kind==='fixed'?'tactical_operator_headset_fixed.glb':kind==='detailed'?'tactical_operator.glb':'tactical_operator_rig.glb';
+     document.getElementById('download').textContent=kind==='fixed'?'Экспортировать исправленный GLB':'Скачать исходный GLB';
      try{
        const gltf=await new Promise((ok,fail)=>loader.load(paths[kind],ok,e=>{
          if(e.total)document.getElementById('progress').style.width=(e.loaded/e.total*100)+'%';
@@ -134,6 +179,8 @@
        obj=gltf.scene;scene.add(obj);
        obj.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;o.frustumCulled=false;}});
        frameModel(obj);
+       if(kind==='fixed')correctHeadset(obj);
+       activeKind=kind;
        mixer=null;clips=gltf.animations||[];select.replaceChildren();
        if(clips.length){
          mixer=new THREE.AnimationMixer(obj);
@@ -141,7 +188,7 @@
          startClip(0);
        }
        animArea.style.display=clips.length?'flex':'none';
-       status.textContent='GLB загружен · '+clips.length+' анимаций · вращай модель';
+       status.textContent=(kind==='fixed'?'Гарнитура опущена на 12 см · можно вращать и сохранить GLB':'GLB загружен · '+clips.length+' анимаций · вращай модель');
        document.getElementById('progress').style.width='100%';
      }catch(e){
        console.error(e);
@@ -149,6 +196,27 @@
        document.getElementById('progress').style.width='0%';
      }
    }
+
+   document.getElementById('download').addEventListener('click',e=>{
+     if(activeKind!=='fixed'||!obj)return;
+     e.preventDefault();
+     const a=e.currentTarget;
+     a.textContent='Создаётся GLB…';
+     status.textContent='Экспорт 3D-модели с исправленной гарнитурой…';
+     new GLTFExporter().parse(obj,data=>{
+       const url=URL.createObjectURL(new Blob([data],{type:'model/gltf-binary'}));
+       const link=document.createElement('a');
+       link.href=url;link.download='tactical_operator_headset_fixed.glb';
+       document.body.append(link);link.click();link.remove();
+       setTimeout(()=>URL.revokeObjectURL(url),30000);
+       a.textContent='Экспортировать исправленный GLB';
+       status.textContent='Исправленный GLB сформирован · гарнитура опущена на 12 см';
+     },err=>{
+       console.error(err);
+       a.textContent='Повторить экспорт GLB';
+       status.textContent='Ошибка экспорта: '+(err.message||String(err));
+     },{binary:true,onlyVisible:true});
+   });
    document.getElementById('detailed').onclick=()=>load('fixed');
    document.getElementById('animated').onclick=()=>load('animated');
    select.onchange=()=>startClip(Number(select.value));
