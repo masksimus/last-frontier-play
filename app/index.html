@@ -7,7 +7,7 @@
 <title>Последний рубеж — Железный периметр</title>
 <meta name="description" content="Изометрический боевик: промышленный комплекс, десять волн мутантов, тяжёлое оружие и оборона генератора.">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="styles.css?v=14.2.0-rc.1">
+<link rel="stylesheet" href="styles.css?v=15.0.0-alpha.1">
 </head>
 <body>
 <main id="game" aria-label="Последний рубеж: Железный периметр">
@@ -49,7 +49,7 @@
   <div class="menuShell">
    <div class="menuTop"><span class="quarantineMark"><i aria-hidden="true"></i> ЗОНА КАРАНТИНА</span><span class="serial">ОБЪЕКТ 09—С / 23:47</span></div>
    <div class="menuContent"><p class="overline">ИЗОМЕТРИЧЕСКИЙ БОЕВИК / ОБОРОНА ПЕРИМЕТРА</p><h1>ПОСЛЕДНИЙ<br><em>РУБЕЖ</em></h1><div class="subtitle"><span aria-hidden="true">///</span> ЖЕЛЕЗНЫЙ ПЕРИМЕТР</div><p class="intro">Комплекс А–7 окружён.<br>Орды заражённых уже идут к генератору.<br>Удержи периметр. Доживи до рассвета.</p><div class="menuFacts"><span>10 <small>ВОЛН</small></span><span>04 <small>ОРУЖИЯ</small></span><span>03 <small>БОССА</small></span></div><div class="deployment"><label for="difficulty">СЛОЖНОСТЬ</label><select id="difficulty"><option value="story">Новобранец</option><option value="standard" selected>Боец</option><option value="veteran">Ветеран</option></select></div><button id="continue" class="secondary hidden" disabled>ПРОДОЛЖИТЬ <span aria-hidden="true">→</span></button><button id="start" class="primary">ВСТУПИТЬ В БОЙ <span aria-hidden="true">→</span></button><p class="saveNote">Прогресс сохраняется между секторами.</p></div>
-   <div class="menuBottom"><div class="keyboardHelp"><span><kbd>WASD</kbd> ДВИЖЕНИЕ</span><span><kbd>МЫШЬ</kbd> ПРИЦЕЛ / ОГОНЬ</span><span><kbd>R</kbd> ЗАРЯД</span><span><kbd>G</kbd> ГРАНАТА</span><span><kbd>SHIFT</kbd> РЫВОК</span><span><kbd>F</kbd> ИМПУЛЬС</span><span><kbd>E</kbd> ДЕЙСТВИЕ</span></div><p class="mobileHelp">Левый джойстик — движение.<br>Правый — прицел и огонь.</p><div class="menuUtilities"><button id="mute" class="utilityButton" aria-label="Включить или выключить звук" title="Звук">ЗВУК <span aria-hidden="true">◖))</span></button><button id="fullscreen" class="utilityButton" aria-label="Полный экран" title="Полный экран">ЭКРАН <span aria-hidden="true">⛶</span></button><details class="settings"><summary>НАСТРОЙКИ</summary><label><input id="motionToggle" type="checkbox"> Меньше вспышек и тряски</label></details></div><p class="credits">Оригинальный мир и материалы · Открытые библиотеки: PixiJS / Howler.js</p></div>
+   <div class="menuBottom"><div class="keyboardHelp"><span><kbd>WASD</kbd> ДВИЖЕНИЕ</span><span><kbd>МЫШЬ</kbd> ПРИЦЕЛ / ОГОНЬ</span><span><kbd>R</kbd> ЗАРЯД</span><span><kbd>G</kbd> ГРАНАТА</span><span><kbd>SHIFT</kbd> РЫВОК</span><span><kbd>F</kbd> ИМПУЛЬС</span><span><kbd>E</kbd> ДЕЙСТВИЕ</span></div><p class="mobileHelp">Левый джойстик — движение.<br>Правый — прицел и огонь.</p><div class="menuUtilities"><button id="mute" class="utilityButton" aria-label="Включить или выключить звук" title="Звук">ЗВУК <span aria-hidden="true">◖))</span></button><button id="fullscreen" class="utilityButton" aria-label="Полный экран" title="Полный экран">ЭКРАН <span aria-hidden="true">⛶</span></button><details class="settings"><summary>НАСТРОЙКИ</summary><label><input id="motionToggle" type="checkbox"> Меньше вспышек и тряски</label></details></div><p class="credits">Оригинальный мир и материалы · Открытые библиотеки: Three.js / cannon-es</p></div>
   </div>
   <div class="sceneCaption" aria-hidden="true"><span class="captionLine"></span><strong>НИКТО НЕ ОТВЕТИЛ.</strong><small>ПРИДЁТСЯ ПРОВЕРИТЬ ЛИЧНО.</small></div>
  </section>
@@ -60,11 +60,12 @@
  <div id="toast" class="hidden" role="status" aria-live="polite"></div>
  <div class="screenEdge" aria-hidden="true"></div>
 </main>
-<script type="module" src="./src/outbreak-pixi.mjs"></script>
-<script src="src/iso-world.js?v=14.2.0-rc.1"></script>
-<script src="assets/outbreak/metadata.js?v=14.2.0-rc.1"></script>
-<script src="assets/siege/metadata.js?v=14.2.0-rc.1"></script>
-<script src="src/iso-renderer.js?v=14.2.0-rc.1"></script>
-<script src="src/iso-game.js?v=14.2.0-rc.1"></script>
+<script type="module" src="./src/frontier-3d.mjs"></script>
+<script src="src/iso-world.js?v=15.0.0-alpha.1"></script>
+<script src="assets/outbreak/metadata.js?v=15.0.0-alpha.1"></script>
+<script src="assets/siege/metadata.js?v=15.0.0-alpha.1"></script>
+<script src="src/iso-renderer.js?v=15.0.0-alpha.1"></script>
+<script src="src/frontier-audio.js?v=15.0.0-alpha.1"></script>
+<script src="src/iso-game.js?v=15.0.0-alpha.1"></script>
 </body>
 </html>

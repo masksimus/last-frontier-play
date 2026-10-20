@@ -12,7 +12,7 @@ const SAVE_KEY = 'last-frontier-outbreak-v1';
 
 // Only browser plumbing is replaced. The actual engine, collision world,
 // controls, projectile simulation and checkpoint validator run unchanged.
-function boot({ storage = new Map(), search = '?test=1' } = {}) {
+function boot({ storage = new Map(), search = '?test=1', audio } = {}) {
   class Element {
     constructor() {
       this.classList = { toggle() {}, add() {}, remove() {} };
@@ -58,6 +58,7 @@ function boot({ storage = new Map(), search = '?test=1' } = {}) {
     },
     addEventListener: (event, listener) => windowHandlers.set(event, listener),
     OutbreakWorld: World,
+    FrontierAudio: audio,
     OutbreakRenderer: {
       render() {},
       screenToWorld: (x, y) => ({ x, y }),
@@ -146,6 +147,95 @@ test('a muzzle offset cannot shoot through the freight-room wall corner', () => 
   game.debug.fire();
   game.debug.step(.04);
   assert.ok(target.hp <= 0, 'a clear shot still hits');
+});
+
+test('3D player and enemy projectiles and flashes share their animated muzzle sockets', () => {
+  const game = physicsArena(), s = game.debug.getState();
+  const socket = { x: 11.2, y: 10.15, height: 1.31 };
+  const enemySocket = { x: 13.8, y: 10.2, height: 1.78 };
+  let sampledRecoil;
+  game.context.OutbreakRenderer.muzzleFor = actor => {
+    if (actor === s.player) { sampledRecoil = actor.recoil; return socket; }
+    return enemySocket;
+  };
+  game.debug.fire();
+  assert.equal(sampledRecoil, 0, 'sample the barrel before applying the new recoil impulse');
+  const bullet = s.bullets[0], flash = s.effects.find(e => e.kind === 'muzzle');
+  for (const key of ['x', 'y', 'height']) {
+    assert.equal(bullet[key], socket[key]); assert.equal(flash[key], socket[key]);
+  }
+  assert.equal(bullet.startX, socket.x); assert.equal(bullet.startY, socket.y); assert.equal(bullet.age, 0);
+  const enemy = s.enemies[0];
+  enemy.burstRemaining = 1; enemy.burstTimer = 0; enemy.burstAngle = Math.PI;
+  game.debug.step(.02);
+  assert.equal(bullet.age, .02);
+  const enemyBullet = s.enemyBullets[0], enemyFlash = s.effects.find(e => e.actorType === 'brute' && e.kind === 'muzzle');
+  assert.ok(enemyBullet && enemyFlash, 'the burst creates a shot and its muzzle flash');
+  for (const key of ['x', 'y', 'height']) {
+    assert.equal(enemyBullet[key], enemySocket[key]); assert.equal(enemyFlash[key], enemySocket[key]);
+  }
+  assert.ok(enemyBullet.vzHeight < 0, 'a barrel above the marine aims down toward the torso');
+  const flightTime = Math.hypot(s.player.x - enemySocket.x, s.player.y - enemySocket.y) / Math.hypot(enemyBullet.vx, enemyBullet.vy);
+  assert.ok(Math.abs(enemySocket.height + enemyBullet.vzHeight * flightTime - 1.05) < 1e-9);
+  game.debug.step(.02);
+  assert.equal(enemyBullet.height, enemySocket.height + enemyBullet.vzHeight * .02);
+  assert.equal(bullet.height, socket.height, 'the marine keeps the barrel height for his outgoing shot');
+});
+
+test('a 3D barrel beyond a wall emits no projectile on the far side', () => {
+  const game = boot(); game.start(); const s = game.debug.getState();
+  assert.equal(game.debug.teleport(12.78, 6.78), true);
+  const angle = 40 * Math.PI / 180;
+  const socket = { x: s.player.x + Math.cos(angle) * .4, y: s.player.y + Math.sin(angle) * .4, height: 1.3 };
+  game.context.OutbreakRenderer.muzzleFor = () => socket;
+  assert.equal(World.lineOfSight(s.level, s.player, socket), false);
+  game.debug.fire();
+  assert.equal(s.bullets.length, 0, 'a blocked socket cannot teleport a shot through the corner');
+  assert.ok(s.effects.some(e => e.kind === 'spark'), 'the intervening wall absorbs the shot');
+  const flash = s.effects.find(e => e.kind === 'muzzle');
+  assert.equal(flash.x, socket.x); assert.equal(flash.height, socket.height);
+});
+
+test('Cannon owns ballistic movement once per update, pauses, and releases fallback physics', () => {
+  const game = physicsArena(), s = game.debug.getState();
+  game.debug.throwGrenade(); game.debug.fire();
+  const grenade = s.grenades[0], casing = s.effects.find(e => e.kind === 'casing');
+  let calls = 0, handled = true;
+  game.context.FrontierPhysics = { active: true, step(state, dt) {
+    calls++; assert.equal(state, s); assert.equal(dt, .02);
+    if (!handled) return false;
+    for (const body of [grenade, casing]) { body.x += .1; body.z = 100; body.vz = 50; body.physical3D = true; }
+    return true;
+  } };
+  const startX = grenade.x;
+  game.debug.step(.02);
+  assert.equal(calls, 1); assert.equal(grenade.x, startX + .1);
+  assert.equal(grenade.z, 100); assert.equal(casing.z, 100, 'legacy gravity must not integrate the same body twice');
+  assert.equal(grenade.life, 1.03, 'the fuse still advances while Cannon moves the body');
+  game.click('pauseButton'); game.debug.step(.1); game.frame(100); game.frame(120);
+  assert.equal(calls, 1); assert.equal(grenade.z, 100, 'pausing also freezes Cannon');
+  game.click('resume'); handled = false; game.debug.step(.02);
+  assert.equal(calls, 2); assert.ok(grenade.z > 100, 'fallback gravity resumes despite an old physical3D marker');
+  assert.ok(casing.z > 100);
+});
+
+test('audio bridge receives stored mute state, modes, weapon positions and reload events', () => {
+  const modes = [], played = [], muteChanges = [];
+  let muted = true;
+  const audio = { status: () => ({ muted, audioReady: true }), mode: value => modes.push(value),
+    mute: value => { muted = value; muteChanges.push(value); },
+    play: (kind, options) => { played.push({ kind, ...options }); return true; } };
+  const game = boot({ audio }); game.start(); const s = game.debug.getState();
+  game.debug.fire(); assert.equal(played.length, 0, 'the engine honors the saved mute setting');
+  game.click('mute'); assert.equal(muted, false); assert.deepEqual(muteChanges, [false]);
+  s.player.cooldown = 0; game.debug.fire(); game.debug.reload();
+  const shot = played.find(item => item.kind === 'shot');
+  assert.equal(shot.weapon, 'rifle'); assert.equal(shot.listenerX, s.player.x); assert.equal(shot.listenerY, s.player.y);
+  assert.equal(shot.x, s.player.x + Math.cos(s.player.angle) * .4);
+  assert.ok(played.some(item => item.kind === 'reload'));
+  game.click('pauseButton'); assert.equal(modes.at(-1), 'paused');
+  game.click('resume'); assert.equal(modes.at(-1), 'playing');
+  assert.equal(modes[0], 'menu'); assert.equal(game.debug.snapshot().audioReady, true);
 });
 
 test('checkpoint validation rejects an inherited weapon name', () => {

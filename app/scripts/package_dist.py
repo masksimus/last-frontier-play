@@ -93,7 +93,7 @@ def write_notices(dist: Path, mode: str, root: Path = ROOT) -> list[dict]:
     notices.mkdir(exist_ok=True)
     entries = []
     if mode == 'vite':
-        for name in ('pixi.js', 'howler', 'vite'):
+        for name in ('three', 'cannon-es', 'vite'):
             package_dir = root / 'node_modules' / name
             manifest_file = package_dir / 'package.json'
             if not manifest_file.is_file():

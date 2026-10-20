@@ -41,6 +41,7 @@
   let muted = false;
   let audioContext;
   let nextAudio = 0;
+  let physicsFrame = false;
   let checkpoint = null;
   let levelStartInventory = null;
   let state;
@@ -139,8 +140,11 @@
     for (const nest of state.nests) if (nest.hp > 0 && dist(p, nest) < 3.8 && W.lineOfSight(state.level, p, nest)) damageNest(nest, 140);
     sound('plasma'); updateUI(); return true;
   }
-  function sound(kind) {
-    if (muted || performance.now() < nextAudio) return;
+  function sound(kind, source = state.player, weapon = state.player.weapon) {
+    if (muted) return;
+    const audio = window.FrontierAudio;
+    if (audio && typeof audio.play === 'function' && audio.play(kind, { weapon, x: source.x, y: source.y, listenerX: state.player.x, listenerY: state.player.y })) return;
+    if (performance.now() < nextAudio) return;
     nextAudio = performance.now() + (kind === 'shot' ? 38 : 18);
     try {
       const bridge = window.FrontierV6;
@@ -175,6 +179,7 @@
   }
   function setMode(mode) {
     state.mode = mode; clearInput();
+    if (window.FrontierAudio && typeof window.FrontierAudio.mode === 'function') window.FrontierAudio.mode(mode);
     const panels = { home: 'menu', briefing: 'briefing', paused: 'paused', shop: 'shop', end: ['dead', 'victory'] };
     for (const [id, panelMode] of Object.entries(panels)) {
       const visible = Array.isArray(panelMode) ? panelMode.includes(mode) : panelMode === mode;
@@ -355,7 +360,7 @@
     if (state.mode !== 'playing') return;
     const p = state.player, spec = WEAPONS[p.weapon];
     if (p.reload || p.clip[p.weapon] >= spec.clip || (p.weapon !== 'pistol' && p.ammo[p.weapon] <= 0)) return;
-    p.reload = spec.reload; p.reloadDuration = spec.reload; p.reloadWeapon = p.weapon; updateUI();
+    p.reload = spec.reload; p.reloadDuration = spec.reload; p.reloadWeapon = p.weapon; sound('reload'); updateUI();
   }
   function completeReload() {
     const p = state.player, key = p.reloadWeapon;
@@ -365,27 +370,48 @@
     p.clip[key] += amount; if (key !== 'pistol') p.ammo[key] -= amount;
     p.reloadWeapon = null;
   }
+  function shotOrigin(actor, weapon, offset) {
+    if (typeof R.muzzleFor === 'function') {
+      const socket = R.muzzleFor(actor, weapon);
+      if (socket && Number.isFinite(socket.x) && Number.isFinite(socket.y) && Number.isFinite(socket.height)) return { ...socket, socket3D: true };
+    }
+    return { x: actor.x + Math.cos(actor.angle || 0) * offset, y: actor.y + Math.sin(actor.angle || 0) * offset };
+  }
+  function blockedMuzzle(actor, muzzle) {
+    if (W.lineOfSight(state.level, actor, muzzle)) return false;
+    // A long 3D barrel may penetrate a wall. Absorb that shot at the first
+    // obstruction instead of spawning a projectile on the other side.
+    let low = 0, high = 1;
+    for (let i = 0; i < 12; i++) {
+      const t = (low + high) / 2;
+      const point = { x: actor.x + (muzzle.x - actor.x) * t, y: actor.y + (muzzle.y - actor.y) * t };
+      if (W.lineOfSight(state.level, actor, point)) low = t; else high = t;
+    }
+    effect('spark', actor.x + (muzzle.x - actor.x) * low, actor.y + (muzzle.y - actor.y) * low, .16, .18, { height: muzzle.height });
+    return true;
+  }
   function fire() {
     const p = state.player, spec = WEAPONS[p.weapon];
     if (p.cooldown > 0 || p.reload > 0) return;
     if (p.clip[p.weapon] <= 0) { reload(); if (p.weapon !== 'pistol' && p.ammo[p.weapon] <= 0) { toast('Нет патронов. Пистолет: клавиша 1.', 2); p.cooldown = .5; } return; }
+    let muzzle = shotOrigin(p, p.weapon, .4);
     p.clip[p.weapon]--; p.cooldown = spec.rate; p.recoil = 1;
-    let muzzle = { x: p.x + Math.cos(p.angle) * .4, y: p.y + Math.sin(p.angle) * .4 };
     // The visual gun barrel must never place a projectile beyond a wall corner.
     // Starting at the body in this case lets the same swept collision resolve it.
-    if (!W.lineOfSight(state.level, p, muzzle)) muzzle = { x: p.x, y: p.y };
-    for (let i = 0; i < spec.pellets; i++) {
+    const blocked = muzzle.socket3D && blockedMuzzle(p, muzzle);
+    if (!muzzle.socket3D && !W.lineOfSight(state.level, p, muzzle)) muzzle = { x: p.x, y: p.y };
+    for (let i = 0; !blocked && i < spec.pellets; i++) {
       const angle = p.angle + (random() - .5) * spec.spread * 2;
-      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, startX: muzzle.x, startY: muzzle.y, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
+      state.bullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, startX: muzzle.x, startY: muzzle.y, height: muzzle.height, age: 0, vx: Math.cos(angle) * spec.speed, vy: Math.sin(angle) * spec.speed, ttl: spec.range / spec.speed, kind: p.weapon, damage: spec.damage * (1 + p.upgrades.damage * .11) * (random() < .03 + p.upgrades.crit * .045 ? 1.85 : 1), r: p.weapon === 'plasma' ? .14 : .055 });
     }
-    effect('muzzle', muzzle.x, muzzle.y, .075, p.weapon === 'shotgun' ? .4 : .22, { angle: p.angle, weapon: p.weapon });
+    effect('muzzle', muzzle.x, muzzle.y, .075, p.weapon === 'shotgun' ? .4 : .22, { angle: p.angle, weapon: p.weapon, height: muzzle.height });
     if (p.weapon !== 'plasma') {
       // Ejection is deterministic and does not consume the combat RNG stream.
       const eject = p.angle + Math.PI * .5;
       effect('casing', p.x, p.y, 2.3, .025, { r: .025, z: 64, vz: 75, vx: Math.cos(eject) * 2.3 + p.vx * .25, vy: Math.sin(eject) * 2.3 + p.vy * .25, spin: p.angle, spinSpeed: 19, bounces: 0 });
     }
     if (!state.reducedMotion) state.shake = Math.max(state.shake, p.weapon === 'shotgun' ? 3 : p.weapon === 'plasma' ? 2.6 : 1.4);
-    sound(p.weapon === 'plasma' ? 'plasma' : 'shot');
+    sound(p.weapon === 'plasma' ? 'plasma' : 'shot', muzzle);
   }
   function throwGrenade() {
     if (state.mode !== 'playing' || state.player.grenades <= 0) return;
@@ -417,7 +443,7 @@
     state.spawnRemaining = Math.max(0, state.spawnRemaining - 1);
     const vx = (enemy.impulseVX || 0) + (enemy.vx || 0) * .22, vy = (enemy.impulseVY || 0) + (enemy.vy || 0) * .22;
     const projected = W.project(vx || Math.cos(enemy.angle) * .01, vy || Math.sin(enemy.angle) * .01);
-    state.corpses.push({ x: enemy.x, y: enemy.y, r: enemy.r, type: enemy.type, isBoss: !!enemy.isBoss, angle: enemy.angle, anim: enemy.anim, age: 0, fall: 0, vx, vy, impulseVX: vx, impulseVY: vy, fallAngle: Math.atan2(projected.y, projected.x) }); if (state.corpses.length > 90) state.corpses.shift();
+    state.corpses.push({ id: enemy.id, x: enemy.x, y: enemy.y, r: enemy.r, type: enemy.type, isBoss: !!enemy.isBoss, angle: enemy.angle, anim: enemy.anim, age: 0, fall: 0, vx, vy, impulseVX: vx, impulseVY: vy, fallAngle: Math.atan2(projected.y, projected.x) }); if (state.corpses.length > 90) state.corpses.shift();
     state.decals.push({ x: enemy.x, y: enemy.y, r: enemy.type === 'queen' ? 1.1 : .3 + random() * .3, alpha: .55 + random() * .3, angle: random() * TAU }); if (state.decals.length > 100) state.decals.shift();
     if (random() < .18 || enemy.type === 'brute' || enemy.type === 'queen') {
       const kind = state.player.hp < 65 && random() < .5 ? 'medkit' : 'ammo';
@@ -435,7 +461,7 @@
     }
   }
   function explode(x, y, radius, damage, playerSafe) {
-    effect('explosion', x, y, .5, radius); sound('explosion');
+    effect('explosion', x, y, .5, radius); sound('explosion', { x, y });
     if (!state.reducedMotion) state.shake = Math.max(state.shake, 9);
     for (const enemy of state.enemies) {
       const d = Math.hypot(enemy.x - x, enemy.y - y); if (enemy.hp > 0 && d < radius + enemy.r && W.lineOfSight(state.level, { x, y }, enemy)) damageEnemy(enemy, damage * (1 - .45 * d / radius), { x, y, kind: 'explosion' });
@@ -452,7 +478,7 @@
   function updateBullets(dt) {
     for (const bullet of state.bullets) {
       bullet.px = bullet.x; bullet.py = bullet.y;
-      const stepTime = Math.min(dt, bullet.ttl); bullet.ttl -= dt;
+      const stepTime = Math.min(dt, bullet.ttl); bullet.ttl -= dt; bullet.age = (bullet.age || 0) + stepTime;
       const nx = bullet.x + bullet.vx * stepTime, ny = bullet.y + bullet.vy * stepTime;
       const subdivisions = Math.max(1, Math.ceil(Math.hypot(nx - bullet.x, ny - bullet.y) / .16));
       let wallT = Infinity;
@@ -483,8 +509,10 @@
     }
     state.bullets = state.bullets.filter(b => b.ttl > 0);
     for (const bullet of state.enemyBullets) {
-      bullet.px = bullet.x; bullet.py = bullet.y; bullet.ttl -= dt;
-      const nx = bullet.x + bullet.vx * dt, ny = bullet.y + bullet.vy * dt;
+      const stepTime = Math.min(dt, bullet.ttl);
+      bullet.px = bullet.x; bullet.py = bullet.y; bullet.age = (bullet.age || 0) + stepTime; bullet.ttl -= dt;
+      if (Number.isFinite(bullet.height) && Number.isFinite(bullet.vzHeight)) bullet.height = Math.max(.15, bullet.height + bullet.vzHeight * stepTime);
+      const nx = bullet.x + bullet.vx * stepTime, ny = bullet.y + bullet.vy * stepTime;
       if (!W.lineOfSight(state.level, bullet, { x: nx, y: ny })) { bullet.ttl = 0; effect(bullet.kind === 'fire' ? 'spark' : 'acid', nx, ny, .25, .25); }
       else if (Number.isFinite(segmentHit(bullet.x, bullet.y, nx, ny, state.player.x, state.player.y, state.player.r + .12))) { damagePlayer(bullet.damage, bullet); bullet.ttl = 0; effect(bullet.kind === 'fire' ? 'spark' : 'acid', nx, ny, .3, .3); }
       bullet.x = nx; bullet.y = ny;
@@ -492,9 +520,17 @@
     state.enemyBullets = state.enemyBullets.filter(b => b.ttl > 0);
   }
   function enemyShot(enemy, angle, speed, damage, kind) {
+    const muzzle = shotOrigin(enemy, kind === 'fire' ? 'rifle' : 'acid', 0);
+    // Boss barrels sit above the marine. Match the visible trajectory to the
+    // torso impact instead of drawing a horizontal tracer over the player's head.
+    const flightTime = Math.max(.05, Math.hypot(state.player.x - muzzle.x, state.player.y - muzzle.y) / speed);
+    const vzHeight = Number.isFinite(muzzle.height) ? (1.05 - muzzle.height) / flightTime : undefined;
     enemy.recoil = 1; enemy.attackSwing = 1;
-    state.enemyBullets.push({ x: enemy.x, y: enemy.y, px: enemy.x, py: enemy.y, startX: enemy.x, startY: enemy.y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
-    effect('acid', enemy.x, enemy.y, .14, .25);
+    if (!muzzle.socket3D || !blockedMuzzle(enemy, muzzle)) state.enemyBullets.push({ x: muzzle.x, y: muzzle.y, px: muzzle.x, py: muzzle.y, startX: muzzle.x, startY: muzzle.y, height: muzzle.height, vzHeight, age: 0, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, ttl: 3, kind: kind || 'acid', damage, sourceType: enemy.type, sourceIsBoss: !!enemy.isBoss });
+    if (kind === 'fire') {
+      effect('muzzle', muzzle.x, muzzle.y, .08, .35, { angle, height: muzzle.height, weapon: 'rifle', actorType: enemy.type, isBoss: !!enemy.isBoss });
+      sound('shot', muzzle, 'rifle');
+    } else effect('acid', muzzle.x, muzzle.y, .14, .25, { height: muzzle.height });
   }
   function updateEnemies(dt) {
     const p = state.player, difficulty = DIFFICULTIES[state.difficulty];
@@ -539,7 +575,6 @@
           enemyShot(enemy, angle, enemy.type === 'queen' ? 9 : 8, enemy.type === 'queen' ? 13 : 10, 'fire');
           if (enemy.type === 'queen') enemyShot(enemy, angle + .12, 8.5, 10, 'fire');
           enemy.burstRemaining--; enemy.burstTimer = enemy.enraged ? .075 : .11; enemy.attackFlash = .12;
-          effect('muzzle', enemy.x + Math.cos(angle) * enemy.r, enemy.y + Math.sin(angle) * enemy.r, .08, .35, { angle, weapon: 'rifle', actorType: enemy.type, isBoss: !!enemy.isBoss });
         }
         continue;
       }
@@ -804,6 +839,7 @@
     if (state.mode === 'playing') setMode('paused'); else if (state.mode === 'paused') setMode('playing');
   }
   function updateBallistic(body, dt, casing = false) {
+    if (physicsFrame && body.physical3D) return;
     body.z = Math.max(0, body.z || 0); body.vz = body.vz || 0; body.bounces = body.bounces || 0;
     // Bounded physics substeps resolve a bounce before applying the next part of
     // a long frame. World.move itself sweeps the horizontal collision circle.
@@ -847,6 +883,8 @@
   }
   function update(dt) {
     state.time += dt; state.levelTime += dt;
+    const physics = window.FrontierPhysics;
+    physicsFrame = !!(physics && physics.active && typeof physics.step === 'function' && physics.step(state, dt));
     updateTransientPhysics(dt);
     updatePlayer(dt); updateBullets(dt);
     if (state.mode !== 'playing') return;
@@ -931,7 +969,11 @@
   on('reloadButton', 'click', reload); on('grenadeButton', 'click', throwGrenade);
   on('interactButton', 'click', interact); on('weaponSwitch', 'click', () => { if (state.mode === 'playing') cycleWeapon(); });
   for (const button of document.querySelectorAll('[data-weapon]')) button.addEventListener('click', () => { if (state.mode === 'playing') switchWeapon(button.dataset.weapon); });
-  on('mute', 'click', () => { muted = !muted; if (window.FrontierV6 && window.FrontierV6.mute) window.FrontierV6.mute(muted); if ($('mute')) { $('mute').textContent = muted ? '♪̸' : '♫'; $('mute').setAttribute('aria-pressed', String(muted)); } if (!muted) sound('pickup'); });
+  function syncMuteButton() { if ($('mute')) { $('mute').textContent = muted ? '♪̸' : '♫'; $('mute').setAttribute('aria-pressed', String(muted)); } }
+  if (window.FrontierAudio && typeof window.FrontierAudio.status === 'function') muted = !!window.FrontierAudio.status().muted;
+  if (window.FrontierV6 && window.FrontierV6.mute) window.FrontierV6.mute(muted);
+  syncMuteButton();
+  on('mute', 'click', () => { muted = !muted; if (window.FrontierAudio && typeof window.FrontierAudio.mute === 'function') window.FrontierAudio.mute(muted); if (window.FrontierV6 && window.FrontierV6.mute) window.FrontierV6.mute(muted); syncMuteButton(); if (!muted) sound('pickup'); });
   on('fullscreen', 'click', () => { const promise = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); if (promise && promise.catch) promise.catch(() => toast('Полноэкранный режим недоступен в этом браузере.')); });
   on('motionToggle', 'change', e => { state.reducedMotion = !!e.target.checked; });
   document.addEventListener('keydown', e => {
@@ -995,7 +1037,7 @@
   if (TEST) {
     window.OutbreakDebug = {
       getState: () => state,
-      snapshot: () => ({ mode: state.mode, levelIndex: state.levelIndex, level: state.level.id, player: { x: state.player.x, y: state.player.y, hp: state.player.hp, armor: state.player.armor, weapon: state.player.weapon, ammo: Object.assign({}, state.player.ammo), clip: Object.assign({}, state.player.clip), cash: state.player.cash, owned: Object.assign({}, state.player.owned), grenades: state.player.grenades, maxHp: state.player.maxHp, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), dashCooldown: state.player.dashCooldown, abilityCooldown: state.player.abilityCooldown }, maxHp: state.player.maxHp, wave: state.wave, waveProgress: state.waveProgress, waveEnemiesRemaining: state.waveEnemiesRemaining, pendingWaves: pendingWaves.length, bossesKilled: state.bossesKilled, resources: state.resources, resourcesCollected: state.resourcesCollected, generatorActivated: state.generatorActivated, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), enemies: state.enemies.length, spawnRemaining: state.spawnRemaining, totalEnemies: state.totalEnemies, kills: state.kills, terminalCount: state.terminals.length, activeTerminals: state.terminals.filter(t => t.active).length, livingNests: state.nests.filter(n => n.hp > 0).length, exitReady: state.exitReady, queued: queued.length, bullets: state.bullets.length, time: state.time, audioReady: !!audioContext && audioContext.state === 'running' || !!(window.FrontierV6 && window.FrontierV6.status && window.FrontierV6.status().audioReady), assetsReady: !!(R.status && R.status().assetsReady) }),
+      snapshot: () => ({ mode: state.mode, levelIndex: state.levelIndex, level: state.level.id, player: { x: state.player.x, y: state.player.y, hp: state.player.hp, armor: state.player.armor, weapon: state.player.weapon, ammo: Object.assign({}, state.player.ammo), clip: Object.assign({}, state.player.clip), cash: state.player.cash, owned: Object.assign({}, state.player.owned), grenades: state.player.grenades, maxHp: state.player.maxHp, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), dashCooldown: state.player.dashCooldown, abilityCooldown: state.player.abilityCooldown }, maxHp: state.player.maxHp, wave: state.wave, waveProgress: state.waveProgress, waveEnemiesRemaining: state.waveEnemiesRemaining, pendingWaves: pendingWaves.length, bossesKilled: state.bossesKilled, resources: state.resources, resourcesCollected: state.resourcesCollected, generatorActivated: state.generatorActivated, level: state.player.level, xp: state.player.xp, xpNeed: state.player.xpNeed, upgrades: Object.assign({}, state.player.upgrades), enemies: state.enemies.length, spawnRemaining: state.spawnRemaining, totalEnemies: state.totalEnemies, kills: state.kills, terminalCount: state.terminals.length, activeTerminals: state.terminals.filter(t => t.active).length, livingNests: state.nests.filter(n => n.hp > 0).length, exitReady: state.exitReady, queued: queued.length, bullets: state.bullets.length, time: state.time, audioReady: !!(window.FrontierAudio && window.FrontierAudio.status && window.FrontierAudio.status().audioReady) || !!audioContext && audioContext.state === 'running' || !!(window.FrontierV6 && window.FrontierV6.status && window.FrontierV6.status().audioReady), assetsReady: !!(R.status && R.status().assetsReady) }),
       finishLevel: () => { if (state.mode !== 'playing') return false; for (const t of state.terminals) t.active = true; for (const n of state.nests) { n.hp = 0; n.budget = 0; } queued = []; pendingWaves = []; state.wave = state.waveEnd; state.enemies = []; state.spawnRemaining = 0; updateObjective(); state.player.x = state.level.exit.x; state.player.y = state.level.exit.y; interact(); return true; },
       step: seconds => { if (!Number.isFinite(seconds) || seconds < 0 || seconds > 10) return false; for (let t = 0; seconds - t > .00000001 && state.mode === 'playing'; t += .02) update(Math.min(.02, seconds - t)); updateUI(); return true; },
       teleport: (x, y) => { if (!Number.isFinite(x) || !Number.isFinite(y) || !W.isWalkable(state.level, x, y, state.player.r)) return false; state.player.x = x; state.player.y = y; resetMotion(state.player); state.player.dashTime = 0; return true; },

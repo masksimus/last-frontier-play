@@ -1,6 +1,6 @@
 {
   "name": "last-frontier-outbreak",
-  "version": "14.2.0-rc.1",
+  "version": "15.0.0-alpha.1",
   "private": true,
   "scripts": {
     "build": "python3 scripts/build_release.py",
@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "pixi.js": "^8.22.0",
-    "howler": "^2.2.4"
+    "howler": "^2.2.4",
+    "three": "0.170.0",
+    "cannon-es": "0.20.0"
   },
   "devDependencies": {
     "vite": "^7.1.0"

@@ -57,3 +57,119 @@ html,body,#game{background:#0a1118}.homeShade{background:linear-gradient(90deg,#
 /* Keep transient notices away from the player's torso on touch screens. */
 @media(max-width:570px){#toast{top:43%}}
 @media(max-height:500px) and (min-width:571px){#toast{top:70%}}
+
+/* Reference HUD: cold steel surrounds, warm ammunition, clear combat silhouettes. */
+#hud {
+ --edge-top: max(var(--edge), env(safe-area-inset-top));
+ --edge-left: max(var(--edge), env(safe-area-inset-left));
+ --edge-right: max(var(--edge), env(safe-area-inset-right));
+ --safe-top-shift: max(0px, calc(env(safe-area-inset-top) - var(--edge)));
+ text-rendering: optimizeLegibility;
+}
+.soldierPanel, .wavePanel, .resourcePanel { top: var(--edge-top); }
+.soldierPanel, .objectivePanel, .location { left: var(--edge-left); }
+.resourcePanel, .radarPanel { right: var(--edge-right); }
+.objectivePanel, .radarPanel, .location, .bossBar { translate: 0 var(--safe-top-shift); }
+.hudPanel {
+ border-color: #93b1bdac;
+ background: linear-gradient(135deg, #344653f2, #101b24f5 15%, #03090ee8 67%);
+ box-shadow: inset 0 0 0 2px #02080dee, inset 0 3px 0 #d6e7f329, inset 0 -2px 0 #5b7a8c38, 0 3px 12px #000a;
+}
+.hudPanel::before { inset: 3px; border-top-color: #d3edfa4d; border-left-color: #a6d7e42e; }
+.soldierPanel { background: linear-gradient(110deg, #18313cf0, #081219ef 47%, #02070bd9); }
+.portraitFrame { border-color: #b5d6e6d6; box-shadow: inset 0 0 0 2px #061019b3, inset 0 0 16px #72cfff4d; }
+.gameTitle { color: #f2f5f6; text-shadow: 0 1px 1px #000, 0 0 9px #b5ddf21c; }
+.barTrack { border-color: #90a0aa85; background: linear-gradient(#020507, #0d1116); }
+.barTrack i { background: linear-gradient(#fff08d 0, #f8c03b 24%, #d39509 75%, #936008); }
+.hpRow .barTrack i { background: linear-gradient(#ff8a87 0, #fb3447 22%, #e11228 72%, #a10019); }
+.wavePanel { background: linear-gradient(#142530f0, #04090eed 68%); }
+.wavePanel > strong { text-shadow: 0 1px 3px #000, 0 0 8px #d2ebff26; }
+.waveTrack i { background: linear-gradient(#ff8583, #f82c3c 30%, #c8081d 84%); }
+.objectivePanel { background: linear-gradient(110deg, #07141aee, #02080bd9); }
+.objectivePanel li > i { border-color: #48d7dcbd; box-shadow: inset 0 0 0 1px #082f36, 0 0 4px #32e3ed29; }
+.objectivePanel li.complete > i::after { content: ""; display: block; width: 7px; height: 4px; margin: 2px 1px; border-left: 2px solid #071d22; border-bottom: 2px solid #071d22; transform: rotate(-45deg); }
+.objectivePanel li > b { font-family: Arial, sans-serif; font-weight: 600; }
+.currency { background: linear-gradient(135deg, #14242de8, #02070cf2 65%); }
+.creditIcon { position: relative; display: block; width: 23px; height: 26px; flex: 0 0 auto; font-size: 0; background: linear-gradient(135deg, #fff2a0, #fbc448 38%, #bd7917 70%, #ffe283); clip-path: polygon(50% 0, 94% 24%, 94% 75%, 50% 100%, 6% 75%, 6% 24%); }
+.creditIcon::before { content: ""; position: absolute; inset: 3px; background: linear-gradient(135deg, #be7c16, #ffcc58 48%, #d28d20); clip-path: inherit; }
+.creditIcon::after { content: ""; position: absolute; inset: 7px 8px; border: 1px solid #ffe9a6; border-right-width: 3px; box-shadow: 1px 0 0 #96600f; }
+.currency b { color: #f6df9b; text-shadow: 0 1px 3px #000; }
+.radarPanel { border-color: #b9ced7ae; background: #030b11ed; }
+.radarPanel::after { content: ""; position: absolute; inset: 4px; pointer-events: none; background: repeating-linear-gradient(0deg, transparent 0 3px, #8dcfe409 3px 4px); box-shadow: inset 0 0 14px #03080b9c; }
+.radarExpand { z-index: 1; }
+.weaponSlot { border-color: #81a3b1bd; background: linear-gradient(135deg, #233843eb, #050d13f1 35%, #020609f2); }
+.weaponSlot::after { content: ""; position: absolute; inset: 3px; border-top: 1px solid #c6e6f129; border-left: 1px solid #90c1d21a; pointer-events: none; }
+.weaponSlot.active { border-color: #ffca43; box-shadow: inset 0 0 0 2px #dfaa3b83, inset 0 4px 0 #fff0ac35, 0 0 12px #e4ac395c; background: linear-gradient(140deg, #3a2d19f0, #121109f2 47%, #040706f5); }
+.weaponSlot.active .weaponAmmo { border-top-color: #cda64c94; color: #fff1c6; }
+.weaponAmmo { background: linear-gradient(#03080ce8, #010508f5); border-top-color: #7393a55b; text-shadow: 0 1px 3px #000; }
+.weaponSlot.locked { opacity: .72; }
+.upgradePanel { border-color: #599eabbf; background: linear-gradient(135deg, #12232bef, #02080cf2 65%); }
+.upgradeCard { background: linear-gradient(145deg, #172a35f2, #050d14f7 48%, #02070bf7); border-color: #839aa5aa; }
+.upgradeCard .upgradePips { text-shadow: 0 0 4px #ffb3232b; }
+.upgradeCard:disabled { opacity: .64; }
+.touchStick { border-color: #c3d1d5bd; background: radial-gradient(circle, #15252e38 25%, #020609b8 72%); box-shadow: inset 0 0 0 4px #0008, inset 0 0 0 5px #cee4ed31, 0 3px 15px #0009; }
+.stickKnob { background: radial-gradient(circle at 40% 31%, #c9e5ed 0, #92b4c5 13%, #688c9f 57%, #476476 88%); box-shadow: inset 0 0 12px #c4e9ff5e, 0 3px 10px #0009; }
+.touchAction { border-color: #c0d3dcd9; background: radial-gradient(circle at 38% 28%, #1c3542f2, #02070bf2 72%); box-shadow: inset 0 0 0 3px #030b11ed, inset 0 0 0 4px #7fa8bc5c, 0 2px 9px #0009; }
+.grenadeAction::after, .abilityAction::after, .dashAction::after {
+ content: ""; position: absolute; width: 70%; height: 70%; pointer-events: none;
+ background: linear-gradient(135deg, #fff, #d4edf9 70%, #a6c7db);
+ -webkit-mask-image: url("assets/ui-controls.svg"); mask-image: url("assets/ui-controls.svg");
+ -webkit-mask-size: 400% 100%; mask-size: 400% 100%;
+ -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+ -webkit-mask-position: 0 0; mask-position: 0 0;
+}
+.abilityAction::after { -webkit-mask-position: 33.333333% 0; mask-position: 33.333333% 0; background: linear-gradient(135deg, #fff, #a8e2ff); }
+.dashAction::after { -webkit-mask-position: 66.666667% 0; mask-position: 66.666667% 0; }
+.grenadeAction > svg, .abilityAction > svg, .dashAction > svg { visibility: hidden; }
+.grenadeAction > b { z-index: 1; right: 8px; bottom: 7px; font-weight: 700; color: #fff; }
+.touchAction:disabled { opacity: .57; }
+.touchAction:not(:disabled):active { background: #1a3f52; border-color: #e0f6ff; }
+.aimCross { width: 76%; height: 76%; border: 0; border-radius: 0; background: #e4eff5; -webkit-mask: url("assets/ui-controls.svg") no-repeat 100% 0 / 400% 100%; mask: url("assets/ui-controls.svg") no-repeat 100% 0 / 400% 100%; }
+.aimCross::before, .aimCross::after { display: none; }
+.aimStick .stickKnob { background: radial-gradient(circle, #f5fcff 0 12%, #bce3f58c 24%, transparent 57%); opacity: .9; }
+
+@media (max-height: 440px) and (min-width: 571px) {
+ .combatBottom { gap: 8px; }
+ .activeWeapon { height: 15px; }
+ .weaponSlot { height: 62px; gap: 1px; }
+ .weaponSlot svg { height: 28px; }
+ .weaponLabel { font-size: 5px; }
+ .weaponAmmo { min-height: 18px; font-size: 10px; }
+ .upgradePanel { padding: 4px 5px; }
+ .upgradePanel > strong { font-size: 8px; margin-bottom: 3px; }
+ .upgradeCard { height: 49px; gap: 1px; padding: 2px 0; }
+ .upgradeCard svg { width: 24px; height: 24px; }
+ .upgradeCard > span:not(.upgradePips) { font-size: 5px; }
+ .upgradeCard .upgradePips { font-size: 8px; }
+ .radarPanel canvas { width: 80px; height: 80px; }
+ .grenadeAction { bottom: 185px; }
+ .creditIcon { width: 19px; height: 22px; }
+ .creditIcon::after { inset: 6px 7px; }
+}
+@media (max-height: 380px) and (min-width: 571px) {
+ .radarPanel { top: 43px; }
+ .radarPanel canvas { width: 62px; height: 62px; }
+ .touchStick { width: 112px; height: 112px; bottom: 24px; }
+ .stickKnob { width: 45px; height: 45px; }
+ .aimStick { width: 76px; height: 76px; bottom: 80px; }
+ .aimStick .stickKnob { width: 22px; height: 22px; }
+ .touchAction { width: 44px; height: 44px; padding: 6px; }
+ .grenadeAction { bottom: 163px; right: 29px; }
+ .abilityAction { right: 105px; bottom: 157px; }
+ .dashAction { right: 113px; bottom: 104px; }
+ .reloadAction, .interactAction, .switchAction { width: 31px; height: 31px; padding: 0; }
+ .combatBottom { left: 138px; right: 108px; }
+ .weaponSlot { height: 58px; }
+ .weaponSlot svg { height: 25px; }
+ .weaponPanel { min-width: 0; }
+ .upgradePanel { width: clamp(157px, 25vw, 205px); }
+ .location { max-width: 185px; }
+}
+@media (max-width: 570px) {
+ .wavePanel { top: calc(var(--edge-top) + 80px); left: var(--edge-left); }
+ .resourcePanel { top: var(--edge-top); }
+ .creditIcon { width: 17px; height: 21px; }
+ .creditIcon::before { inset: 2px; }
+ .creditIcon::after { inset: 5px 6px; }
+ .combatBottom { bottom: max(12px, env(safe-area-inset-bottom)); }
+}
