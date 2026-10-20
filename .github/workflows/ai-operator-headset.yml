@@ -53,10 +53,15 @@ jobs:
           const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-webgl']});
           const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1,acceptDownloads:true});
           page.on('pageerror',e=>console.log('PAGE_ERROR',e.message));
-          page.on('console',m=>{if(m.type()==='error')console.log('BROWSER_ERROR',m.text())});
+          page.on('requestfailed',r=>console.log('REQUEST_FAILED',r.url(),r.failure()?.errorText));
+          page.on('response',r=>{if(r.url().includes('operator-preview')||r.url().includes('three-viewer')||r.url().includes('tactical_operator'))console.log('HTTP',r.status(),r.url())});
+          page.on('console',m=>console.log('BROWSER_CONSOLE',m.type(),m.text()));
           try{
             await page.goto('http://127.0.0.1:5173/operator-preview.html',{waitUntil:'domcontentloaded',timeout:90000});
-            await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('Гарнитура опущена'),null,{timeout:90000});
+            await page.waitForTimeout(9000);
+            console.log('ACTUAL_STATUS',await page.locator('#status').innerText(),'pageTitle',await page.title());
+            console.log('LOADED_RESOURCES',await page.evaluate(()=>performance.getEntriesByType('resource').filter(x=>x.name.includes('three-viewer')||x.name.includes('tactical_operator')).map(x=>({name:x.name,duration:x.duration}))));
+            await page.waitForFunction(()=>document.querySelector('#status')?.textContent?.includes('Гарнитура опущена'),null,{timeout:20000});
             const fixed=await page.locator('#status').innerText();
             await page.screenshot({path:'public/models/characters/operator_headset_fixed_browser.png'});
             await page.locator('#detailed').click();
