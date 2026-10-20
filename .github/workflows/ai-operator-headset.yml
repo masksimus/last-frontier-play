@@ -1,0 +1,23 @@
+name: AI operator - diagnose mispositioned headset
+on:
+  push:
+    branches: [ai/fix-operator-headset-20261020]
+    paths:
+      - .github/workflows/ai-operator-headset.yml
+      - tools/audit_operator_headset.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
+      - name: Inspect source GLB mesh bounds and headset candidates
+        run: |
+          blender --background -t 2 --python tools/audit_operator_headset.py
