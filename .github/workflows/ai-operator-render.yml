@@ -41,5 +41,7 @@ jobs:
                   app/public/models/characters/operator_visual_audit.json
           if ! git diff --cached --quiet; then
             git commit -m "review: add real renders of licensed operator model"
+            git fetch origin ai/tactical-operator-real-mesh
+            git rebase origin/ai/tactical-operator-real-mesh
             git push origin HEAD:ai/tactical-operator-real-mesh
           fi
