@@ -1,23 +1,37 @@
-name: AI operator - diagnose mispositioned headset
+name: AI operator - fix headset without touching rig
 on:
   push:
     branches: [ai/fix-operator-headset-20261020]
     paths:
       - .github/workflows/ai-operator-headset.yml
       - tools/audit_operator_headset.py
+      - tools/fix_operator_headset.py
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
-  inspect:
+  patch-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 17
     steps:
       - uses: actions/checkout@v4
       - name: Install Blender
         run: |
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy
-      - name: Inspect source GLB mesh bounds and headset candidates
+      - name: Patch only the headphone vertices and verify position in Blender
         run: |
-          blender --background -t 2 --python tools/audit_operator_headset.py
+          blender --background -t 2 --python tools/fix_operator_headset.py
+          test -s app/public/models/characters/tactical_operator_headset_fixed.glb
+          test -s app/public/models/characters/headset_fix_report.json
+      - name: Commit verified revision on feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f app/public/models/characters/tactical_operator_headset_fixed.glb app/public/models/characters/headset_fix_report.json
+          if ! git diff --cached --quiet; then
+            git commit -m "assets: position tactical headset on operator helmet"
+            git fetch origin ai/fix-operator-headset-20261020
+            git rebase origin/ai/fix-operator-headset-20261020
+            git push origin HEAD:ai/fix-operator-headset-20261020
+          fi
