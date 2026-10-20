@@ -19,12 +19,16 @@ jobs:
       - name: Install headless Blender
         run: |
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq blender python3-numpy python3-pip
           blender --version
+          blender --background --python-expr "import sys;print('Blender Python:',sys.version,sys.path)"
       - name: Render front, three-quarter and rear views
         run: |
           test -s app/public/models/characters/tactical_operator.glb
           blender --background -t 2 --python tools/render_ai_operator.py
+          test -s app/public/models/characters/tactical_operator_front.png
+          test -s app/public/models/characters/tactical_operator_threequarter.png
+          test -s app/public/models/characters/tactical_operator_back.png
       - name: Commit preview images and audit
         run: |
           set -euo pipefail
