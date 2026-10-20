@@ -211,7 +211,8 @@
        status.textContent='Ошибка экспорта: '+(err.message||String(err));
      },{binary:true,onlyVisible:true});
    });
-   document.getElementById('detailed').onclick=()=>load('fixed');
+   document.getElementById('fixed').onclick=()=>load('fixed');
+   document.getElementById('detailed').onclick=()=>load('detailed');
    document.getElementById('animated').onclick=()=>load('animated');
    select.onchange=()=>startClip(Number(select.value));
    document.getElementById('play').onclick=()=>{
@@ -223,7 +224,7 @@
    }
    addEventListener('resize',resize);resize();
    (function tick(){requestAnimationFrame(tick);if(mixer)mixer.update(clock.getDelta());else clock.getDelta();controls.update();renderer.render(scene,camera)})();
-   load('detailed');
+   load('fixed');
  </script>
 </body>
 </html>
