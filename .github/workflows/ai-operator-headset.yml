@@ -77,6 +77,14 @@ jobs:
             const glb=readFileSync('/tmp/tactical_operator_headset_fixed.glb');
             if(glb.subarray(0,4).toString()!=='glTF'||glb.readUInt32LE(8)!==glb.length||glb.length<1000000)
               throw Error('Invalid GLB export '+glb.length);
+            const jsonChunkSize=glb.readUInt32LE(12);
+            if(glb.subarray(16,20).toString()!=='JSON')throw Error('GLB JSON chunk missing');
+            const doc=JSON.parse(glb.subarray(20,20+jsonChunkSize).toString());
+            if((doc.meshes?.length||0)<12||(doc.images?.length||0)<5||(doc.skins?.length||0)<1
+               ||!doc.nodes.some(n=>n.name==='Headphones_corrected')){
+               throw Error('Fixed GLB missing character, textures, skin or corrected headset');
+            }
+            writeFileSync('public/models/characters/tactical_operator_headset_fixed.glb',glb);
             writeFileSync('public/models/characters/headset_browser_report.json',
               JSON.stringify({fixed_status:fixed,original_status:unmodified,exported_bytes:glb.length,
               user_agent:await page.evaluate(()=>navigator.userAgent),
@@ -88,7 +96,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/public/models/characters/operator_headset_fixed_browser.png app/public/models/characters/operator_headset_original_browser.png app/public/models/characters/headset_browser_report.json
+          git add -f app/public/models/characters/tactical_operator_headset_fixed.glb app/public/models/characters/operator_headset_fixed_browser.png app/public/models/characters/operator_headset_original_browser.png app/public/models/characters/headset_browser_report.json
           if ! git diff --cached --quiet; then
             git commit -m "test: record actual Chrome render and successful headset GLB export"
             git fetch origin ai/fix-operator-headset-20261020
