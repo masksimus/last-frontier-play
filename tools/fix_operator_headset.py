@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Fix tactical operator ear protection geometry in GLB, preserving textures/skin/bones.
-Derive a glTF-local displacement from Blender world-space samples (original has exotic units).
+"""Patch only the HeadphonesT glTF node TRS, preserving original mesh and skin bytes.
+Calibrate transform empirically against Blender 3D world-space bounding boxes.
 """
 import bpy, copy, json, pathlib, struct, math
 from mathutils import Vector, Matrix
@@ -31,26 +31,17 @@ assert len(material_ids)==1,material_ids
 matches=[(mi,prim) for mi,m in enumerate(g["meshes"]) for prim in m["primitives"] if prim.get("material") in material_ids]
 assert len(matches)==1,("Ambiguous headphone mesh",matches)
 mi,primitive=matches[0]
-aidx=primitive["attributes"]["POSITION"]
-assert not any(aidx==p["attributes"].get("POSITION") for i,m in enumerate(g["meshes"]) for p in m["primitives"] if i!=mi)
-accessor=g["accessors"][aidx];view=g["bufferViews"][accessor["bufferView"]]
-assert accessor["type"]=="VEC3" and accessor["componentType"]==5126 and "sparse" not in accessor
-assert view.get("buffer",0)==0 and "extensions" not in view
-offset=view.get("byteOffset",0)+accessor.get("byteOffset",0)
-stride=view.get("byteStride",12)
-assert stride>=12 and offset+(accessor["count"]-1)*stride+12<=len(original)
-print("SOURCE_HEADPHONES",g["meshes"][mi].get("name"),"vertices",accessor["count"],"glTF_position_range",accessor.get("min"),accessor.get("max"))
+nodes=[i for i,n in enumerate(g["nodes"]) if n.get("mesh")==mi]
+assert len(nodes)==1,("Ambiguous headphone node",nodes)
+node_id=nodes[0]
+assert "matrix" not in g["nodes"][node_id]
+print("HEADPHONE_GLTF_NODE",node_id,g["nodes"][node_id])
 def patch(local_delta,output):
     new_g=copy.deepcopy(g)
-    new_b=bytearray(original)
-    for v in range(accessor["count"]):
-        at=offset+stride*v
-        p=struct.unpack_from("<3f",original,at)
-        struct.pack_into("<3f",new_b,at,*(p[i]+local_delta[i] for i in range(3)))
-    acc=new_g["accessors"][aidx]
-    for key in ("min","max"):
-        if key in acc:acc[key]=[acc[key][i]+local_delta[i] for i in range(3)]
-    write(output,new_g,new_b)
+    node=new_g["nodes"][node_id]
+    existing=node.get("translation",[0,0,0])
+    node["translation"]=[existing[i]+local_delta[i] for i in range(3)]
+    write(output,new_g,original)
 def inspect(path):
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
@@ -69,40 +60,37 @@ def inspect(path):
     return rows,candidates[0]
 reference,head_name=inspect(SRC)
 head=reference[head_name]
-print("HEADSET_ORIGINAL_WORLD",list(head["center"]),"reference_cap",list(reference["Object_109"]["center"]))
-PROBE=10000.0
+print("ORIGINAL_HEADPHONE_WORLD",list(head["center"]),"CAP",list(reference["Object_109"]["center"]))
+PROBE=10000.
 columns=[]
 for axis in range(3):
-    d=[0.0,0.0,0.0];d[axis]=PROBE
-    probe=ROOT/("temporary_headset_axis_"+str(axis)+".glb")
+    d=[0.,0.,0.];d[axis]=PROBE
+    tmp=ROOT/("temporary_node_probe_"+str(axis)+".glb")
     try:
-        patch(d,probe)
-        rows,name=inspect(probe)
+        patch(d,tmp)
+        rows,name=inspect(tmp)
         disp=rows[name]["center"]-head["center"]
         columns.append(disp/PROBE)
-        print("WORLD_PER_GLTF_UNIT_AXIS",axis,list(disp/PROBE))
-    finally:
-        probe.unlink(missing_ok=True)
+        print("NODE_WORLD_PER_LOCAL_AXIS",axis,list(disp/PROBE))
+    finally:tmp.unlink(missing_ok=True)
 jac=Matrix(tuple(tuple(columns[col][row] for col in range(3)) for row in range(3)))
 det=jac.determinant()
-print("TRANSFORM_DETERMINANT",det)
-assert abs(det)>1e-22,("Cannot safely derive headset transform",det)
-local=jac.inverted() @ Vector((0,0,-TARGET_DOWN))
-assert all(math.isfinite(x) and abs(x)<10000000 for x in local),("Unreasonable local shift",list(local))
-print("CALCULATED_GLTF_LOCAL_MOVE",list(local))
+print("NODE_JACOBIAN_DET",det)
+assert abs(det)>1e-22,("Node TRS does not control the headphone world position",det)
+local=jac.inverted()@Vector((0.,0.,-TARGET_DOWN))
+assert all(math.isfinite(x) and abs(x)<1e8 for x in local),("Suspicious local movement",list(local))
 patch(list(local),DST)
 corrected,correct_name=inspect(DST)
 actual=corrected[correct_name]["center"]-head["center"]
-print("ACTUAL_WORLD_SHIFT",list(actual))
+print("ACTUAL_HEADPHONE_WORLD_SHIFT",list(actual),"LOCAL_TRANSLATION",list(local))
 assert abs(actual.z+TARGET_DOWN)<.025 and abs(actual.x)<.025 and abs(actual.y)<.025,("Headset placement incorrect",list(actual))
 assert len(corrected)==len(reference)
 for name,ob in reference.items():
     if name==head_name:continue
-    assert name in corrected,("Missing other mesh",name)
-    assert (corrected[name]["center"]-ob["center"]).length<0.0001,("Unrelated mesh moved",name)
+    assert name in corrected and (corrected[name]["center"]-ob["center"]).length<.0001,("Other mesh changed",name)
 report={
  "source":SRC.name,"fixed_file":DST.name,"headset_mesh":head_name,
- "headset_material":"HeadphonesT","accessor":aidx,"changed_vertices":accessor["count"],
+ "headset_material":"HeadphonesT","headset_node_id":node_id,"change":"node translation only, binary mesh intact",
  "requested_down_metres":TARGET_DOWN,
  "glTF_local_displacement":[round(v,4) for v in local],
  "verified_blender_world_displacement":[round(v,5) for v in actual],
