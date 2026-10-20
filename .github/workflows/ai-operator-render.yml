@@ -5,6 +5,7 @@ on:
       - ai/tactical-operator-real-mesh
     paths:
       - .github/workflows/ai-operator-render.yml
+      - tools/render_ai_operator.py
   workflow_dispatch:
 permissions:
   contents: write
