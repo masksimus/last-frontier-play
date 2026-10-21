@@ -46,6 +46,10 @@ Do not invent test passes, performance numbers, screenshots, frame rates, tool a
 - A prototype, preview or generated asset is not a release candidate until integration, tests and platform-specific requirements are verified.
 - Keep production deploys and older release versions safe; deployment workflow changes require explicit review.
 
+## Long tasks and resumable development
+
+For a task spanning multiple commits or sessions, create and maintain `docs/agent-tasks/<issue-or-short-id>.md` using `docs/agent-tasks/README.md`. Record acceptance criteria, exact branch and verified SHA, changed paths, test evidence, blockers and one concrete next action. Before resuming, inspect that record alongside current code and CI. Continue with the next unfinished milestone instead of restarting or requesting requirements already in the repository. Update the checkpoint after each verified increment and before ending an interrupted session. This is **durable handoff state**, not proof of a background agent; do not claim continuous execution without a separately configured runner.
+
 ## Completion contract
 
 Every task report must contain: **what changed**, **where it changed (paths/commit or PR)**, **what was actually tested with command and result**, **what the user can run or open**, and **remaining limitations**. Prefer a working, tested subset over an impressive but unverified claim.
