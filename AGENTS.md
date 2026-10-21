@@ -37,6 +37,10 @@ For 3D or GLB work: validate glTF/GLB structure and actual game loading; inspect
 
 Do not invent test passes, performance numbers, screenshots, frame rates, tool availability, or platform approvals. If a check cannot run, mark it **NOT RUN** and explain precisely why. If it fails, include the failure.
 
+## Privacy, security and digital-law responsibilities
+
+For new features, existing product changes, analytics, SDKs, data collection, user login, payments or public release, apply `docs/PRIVACY_SECURITY_ROLES.md`. Review the work from the five perspectives: information security, digital law, DPO/privacy coordination, secure development and product/data analysis. Map actual data flows and user permissions first; then define safeguards and draft the relevant policies from **verified** product behavior. Assess applicable Russian law (including 152-FZ) and platform rules before release, with real operator identity and human review where needed. Report evidence-backed security/privacy tests and unresolved risks as PASS/FAIL/NOT RUN. Do not claim that an AI is an appointed DPO, that an automatically drafted policy makes the product compliant, or that regulation notifications were filed unless independently verified.
+
 ## Security, licensing and release
 
 - Never commit credentials, tokens, private materials or production signing keys.
