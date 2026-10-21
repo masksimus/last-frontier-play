@@ -21,6 +21,10 @@ Continue developing the **existing** "Последний рубеж / Last Front
 5. Add or update tests for changed behavior. Investigate failures and retest instead of hiding or ignoring them.
 6. Report the exact changed files, reproducible checks, logs/artifacts and remaining blockers.
 
+## Creative roles and visual acceptance
+
+For any UI, game design, concept art, 2D/3D asset, environment or level-design task, follow `docs/CREATIVE_ROLES.md`. Select the relevant specialist responsibilities, supply real editable/source artifacts when possible, integrate them into the existing product, and verify fidelity against user-approved references with **actual render/build screenshots** and behavior tests. Never claim a mockup, illustrative prompt, isolated model or untested greybox is the complete playable experience. Explicitly report visual differences and checks that were NOT RUN.
+
 ## Verified build and gameplay
 
 The `app/package.json` declares:
