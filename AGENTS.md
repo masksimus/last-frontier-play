@@ -53,3 +53,7 @@ For a task spanning multiple commits or sessions, create and maintain `docs/agen
 ## Completion contract
 
 Every task report must contain: **what changed**, **where it changed (paths/commit or PR)**, **what was actually tested with command and result**, **what the user can run or open**, and **remaining limitations**. Prefer a working, tested subset over an impressive but unverified claim.
+
+## Six-role QA and acceptance contract
+
+Apply `docs/PRODUCT_QA_UAT_ROLES.md` to all product milestones. Separate six review roles: QA engineer (functional/device/security regressions), UI/UX designer (actual rendered visuals and usability), developer (root-cause fixes and regression tests), product manager/producer (requirements and release gates), business customer/product owner (actual stakeholder acceptance), and real opt-in users (alpha/beta/UAT evidence). Save observed tests, bugs, screenshots and explicit PASS/FAIL/NOT RUN. Never fabricate product-owner approval or real-user reports; simulated tests and CI PASS are not physical-device UAT or permission to release.
