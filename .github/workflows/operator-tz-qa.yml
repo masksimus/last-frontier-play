@@ -1,0 +1,41 @@
+name: Operator GLB acceptance audit
+on:
+  push:
+    branches: [ai/character-tz-qa-20261024]
+    paths:
+      - app/scripts/audit_operator_glb.cjs
+      - app/tests/operator_qa.test.cjs
+      - .github/workflows/operator-tz-qa.yml
+  pull_request:
+    paths:
+      - app/scripts/audit_operator_glb.cjs
+      - app/tests/operator_qa.test.cjs
+      - .github/workflows/operator-tz-qa.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Unit tests
+        run: node --test app/tests/operator_qa.test.cjs
+      - name: Inspect shipped soldier assets, no false positive pass
+        run: |
+          mkdir -p audit-results
+          node app/scripts/audit_operator_glb.cjs \
+            app/public/models/characters/tactical_operator.glb \
+            app/public/models/characters/tactical_operator_headset_fixed.glb \
+            app/public/models/characters/tactical_operator_rig.glb \
+            > audit-results/operator_technical_audit.json
+          node -e "const r=require('./audit-results/operator_technical_audit.json');for(const x of r.results){console.log(x.file,x.triangles,'tris',x.animations,'animations');if(!x.checks.validMesh||!x.checks.hasSkin)process.exitCode=1}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: operator-technical-qa-report
+          path: audit-results/operator_technical_audit.json
+          if-no-files-found: warn
